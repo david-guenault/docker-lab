@@ -1,0 +1,37 @@
+# vim: tabstop=4 shiftwidth=4 expandtab
+dock2dns:
+    image: dguenault/dock2dns:latest
+    name: dock2dns
+    hostname: dock2dns
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf
+        - /var/run/docker.sock:/docker.sock
+    command: --domain=@DOMAIN@ --etcd=@BRIDGE@:4001 --socket=unix://docker.sock
+
+etcd:  
+    image: dguenault/etcd:0.4.6
+    name: etcd
+    hostname: etcd
+    links:
+        - dock2dns:dock2dns
+    ports:
+        - "@BRIDGE@:4001:4001"
+    volumes: 
+        - /etc/localtime:/etc/localtime:ro
+    command: -addr @BRIDGE@:4001 -name etcd
+
+skydns:
+    image: dguenault/skydns:latest
+    name: skydns
+    hostname: skydns
+    links:
+        - etcd:etcd
+    environment:
+        - ETCD_MACHINES=@BRIDGE@:4001
+    ports:
+        - @BRIDGE@:53:53/udp
+    command: -nameservers=@DNS@ -domain=@DOMAIN@ -addr=0.0.0.0:53 -verbose 
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+

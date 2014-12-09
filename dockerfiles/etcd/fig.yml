@@ -1,0 +1,11 @@
+# vim: tabstop=4 shiftwidth=4 expandtab
+etcd:
+    image: dguenault/etcd:latest
+    name: etcd 
+    hostname: etcd
+    ports:
+        - 4001:4001
+    command: -name etcd-skydns-1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+

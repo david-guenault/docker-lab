@@ -1,0 +1,2 @@
+nameserver @BRIDGE@ 
+domain @DOMAIN@ 
