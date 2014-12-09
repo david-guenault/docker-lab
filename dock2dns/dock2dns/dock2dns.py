@@ -7,6 +7,7 @@ from docker import Client
 import requests
 import time
 import optparse
+import logging
 
 def inspect(id):
     try:
@@ -65,6 +66,9 @@ def listen(client=None,domain=None):
             update(eventdata)
     
 if __name__ == '__main__':
+
+    logger = logging.getLogger('dock2dns')
+    logger.setLevel(logging.DEBUG)
 
     parser = optparse.OptionParser('', version="%prog ")
     parser.add_option('--socket', dest="socket", help="""Docker daemon socket uri (unix://var/run/docker.sock)""")

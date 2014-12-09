@@ -7,7 +7,7 @@ dock2dns:
         - /etc/localtime:/etc/localtime:ro
         - resolv.conf:/etc/resolv.conf
         - /var/run/docker.sock:/docker.sock
-    command: --domain=@DOMAIN@ --etcd=@BRIDGE@:4001 --socket=unix://docker.sock
+    command: --domain=@DOMAIN@ --etcd=http://@BRIDGE@:4001 --socket=unix://docker.sock
 
 etcd:  
     image: dguenault/etcd:0.4.6
