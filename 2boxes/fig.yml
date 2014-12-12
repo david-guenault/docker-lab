@@ -1,0 +1,18 @@
+# vim: tabstop=4 shiftwidth=4 expandtab
+b1:
+    image: busybox 
+    name: b1 
+    hostname: b1 
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf
+    entrypoint: top
+
+b2:
+    image: busybox 
+    name: b2 
+    hostname: b2 
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf
+    entrypoint: top
