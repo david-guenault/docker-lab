@@ -9,61 +9,69 @@ import time
 import optparse
 import logging
 
-def inspect(id):
-    try:
-        inspect = client.inspect_container(id)
-        return inspect 
-    except:
-        return None
 
-def req(method,uri,data = None, ttl = None ,retry=5,sleep=2):
+class Dock2dns():
 
-    payload = {}
+    def __init__(self, socket = None, etcd = None, domain = None, ttl = 0, retry = 5, sleep = 2):
+        self.socket = socket
+        self.etcd = etcd
+        self.domain = domain
+        self.ttl = ttl
+        self.retry = retry
+        self.sleep = sleep
+        self.client =  Client(base_url = self.socket)
 
-    if data:
-        payload["value"] = json.dumps(data)
-    if ttl:
-        payload["ttl"] = ttl
-
-    for r in range(retry):   
+    def inspect(self, id):
         try:
-            print method, uri, payload 
-            r = requests.request(method, uri, data = payload)
-            break
+            inspect = self.client.inspect_container(id)
+            return inspect 
         except:
-            time.sleep(sleep)
+            return None
+
+    def req(self, method, uri, data = None):
+
+        payload = {}
+
+        if data:
+            payload["value"] = json.dumps(data)
+        
+        payload["ttl"] = self.ttl
+
+        for r in range(self.retry):   
+            try:
+                print method, uri, payload 
+                r = requests.request(method, uri, data = payload)
+                break
+            except:
+                time.sleep(self.sleep)
+                pass
+
+    def update(self, event):
+        config = self.inspect(event["id"]) 
+
+        if not config:
+            return
+
+        if config["Config"]["Hostname"] != "":
+            dnsname = config["Config"]["Hostname"]
+        else:
+            dnsname = config["Name"].replace("/","")
+
+        uri="%s/v2/keys/skydns/%s/%s" % (self.etcd, "/".join(self.domain.split(".")[::-1]), dnsname )
+
+        if event["status"] == "start":
+            data = { "Host" : config["NetworkSettings"]["IPAddress"] }
+            self.req('PUT', uri, data = data)
+        elif event["status"] in ("die", "stop"):
+            self.req('DELETE', uri)
             pass
 
-def update(event):
-    config = inspect(event["id"]) 
-
-    if not config:
-        return
-
-    if config["Config"]["Hostname"] != "":
-        dnsname = config["Config"]["Hostname"]
-    else:
-        dnsname = config["Name"].replace("/","")
-
-    uri="%s/v2/keys/skydns/%s/%s" % (ETCD, "/".join(DOMAIN.split(".")[::-1]), dnsname )
-
-    if event["status"] == "start":
-        data = { "Host" : config["NetworkSettings"]["IPAddress"] }
-        req('PUT', uri, data = data, ttl = TTL)
-    elif event["status"] in ("die", "stop"):
-        req('DELETE', uri)
-        pass
-
-def listen(client=None,domain=None):
-    if not client or not domain:
-        print "No client or domain defined"
-        return False
-
-    while True:
-        e = client.events()
-        for data in e:
-            eventdata = json.loads(data)
-            update(eventdata)
+    def listen(self):
+        while True:
+            e = self.client.events()
+            for data in e:
+                eventdata = json.loads(data)
+                self.update(eventdata)
     
 if __name__ == '__main__':
 
@@ -94,5 +102,5 @@ if __name__ == '__main__':
 
     TTL = None 
 
-    client = Client(base_url = SOCKET)
-    listen(client,DOMAIN)    
+    d2d = Dock2dns(socket = SOCKET, etcd = ETCD, domain = DOMAIN, ttl = None, retry = 5, sleep = 2)
+    d2d.listen()
