@@ -8,11 +8,11 @@ import requests
 import time
 import optparse
 import logging
-
+import threading
 
 class Dock2dns():
 
-    def __init__(self, socket = None, etcd = None, domain = None, ttl = 0, retry = 5, sleep = 2):
+    def __init__(self, socket = None, etcd = None, domain = None, ttl = 0, retry = 5, sleep = 2, debug = None):
         self.socket = socket
         self.etcd = etcd
         self.domain = domain
@@ -20,6 +20,15 @@ class Dock2dns():
         self.retry = retry
         self.sleep = sleep
         self.client =  Client(base_url = self.socket)
+        self.debug = debug
+
+    def log(self,message):
+        try:
+            sys.stdout.write(message)
+            sys.stdout.write("\n")
+            sys.stdout.flush()
+        except:
+            pass
 
     def inspect(self, id):
         try:
@@ -37,9 +46,10 @@ class Dock2dns():
         
         payload["ttl"] = self.ttl
 
+        self.log("%s %s %s" % (method,uri,data))
+
         for r in range(self.retry):   
             try:
-                print method, uri, payload 
                 r = requests.request(method, uri, data = payload)
                 break
             except:
@@ -47,6 +57,7 @@ class Dock2dns():
                 pass
 
     def update(self, event):
+
         config = self.inspect(event["id"]) 
 
         if not config:
@@ -58,13 +69,22 @@ class Dock2dns():
             dnsname = config["Name"].replace("/","")
 
         uri="%s/v2/keys/skydns/%s/%s" % (self.etcd, "/".join(self.domain.split(".")[::-1]), dnsname )
+        method = None
+        data = None
+
+        # message = "UPDATE %s %s %s" % (event["status"], dnsname, config["NetworkSettings"]["IPAddress"])
+        # self.log(message)
 
         if event["status"] == "start":
             data = { "Host" : config["NetworkSettings"]["IPAddress"] }
-            self.req('PUT', uri, data = data)
+            method = "PUT"
         elif event["status"] in ("die", "stop"):
-            self.req('DELETE', uri)
-            pass
+            data = {}
+            method = "DELETE"
+        
+        if method:
+            treq = threading.Thread(target = self.req, args = (method,uri,data,))
+            treq.start()
 
     def listen(self):
         while True:
@@ -82,6 +102,7 @@ if __name__ == '__main__':
     parser.add_option('--socket', dest="socket", help="""Docker daemon socket uri (unix://var/run/docker.sock)""")
     parser.add_option('--etcd', dest="etcd", help="""Etcd store uri (http://172.17.42.1:4001)""")
     parser.add_option('--domain', dest="domain", help="""Domain on which discovered containers will be bind to (toto.tld)""")
+    parser.add_option('--debug', dest="debug", action="store_false", default=False, help="""Enable debug logging""")
    
     opts, args = parser.parse_args() 
 
@@ -100,7 +121,9 @@ if __name__ == '__main__':
     else:
         DOMAIN = "dock2dns.lan"
 
+    DEBUG = opts.debug
+
     TTL = None 
 
-    d2d = Dock2dns(socket = SOCKET, etcd = ETCD, domain = DOMAIN, ttl = None, retry = 5, sleep = 2)
+    d2d = Dock2dns(socket = SOCKET, etcd = ETCD, domain = DOMAIN, ttl = None, retry = 5, sleep = 2, debug=DEBUG)
     d2d.listen()
