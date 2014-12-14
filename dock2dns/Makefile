@@ -9,4 +9,10 @@ config:
 clean:
 	rm -f resolv.conf fig.yml
 
+image:
+	cp dock2dns/dock2dns.py ../dockerfiles/dock2dns/files/dock2dns.py
+	cd ../dockerfiles/dock2dns && \
+	$(MAKE) clean && \
+	$(MAKE) build
+
 .PHONY: config clean
