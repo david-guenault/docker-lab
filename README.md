@@ -134,3 +134,5 @@ PING b2.mydomain.tld (172.17.0.213): 56 data bytes
 ```
 
 The secret behind the "magic" is that i provide a hostname to the container and i map a resolv.conf file as a volume. DNS name resolution in the container point to 172.17.42.1. 
+
+Note : Some should arg that all of those things are useless since you can achieve the same goal with links. And yes they are right ... at least if they do not use circular links. Circular link are prohibited in docker (and also in fig). You cannot link container A to B and B to A .... if you have to do such a thing you need at least dns discovery. 
