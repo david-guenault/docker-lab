@@ -1,12 +1,11 @@
 docker-lab
 ==========
 
-Easyly build docker containers based labs. The main "drawback" with docker containers is to deal with ip address change at each reboot. 
-There are solutions that help a lot with this but at a cost of complexity that is not productive at all for just building simple labs. 
-Dock2dns just create and remove dnsentry in skydns2 each time you start/stop containers. 
-This way communication between containers is as simple as just using a name. Say you have a container with hostname A and another with hostname B. If you want to ping A from B you just have to ping it like ping B. dock2dns just do the dns discovery job for you.
+Fast and easy way to build containers based labs. 
 
-Docker lab use etcd and skydns2 as dynamic dns registration tool with the dock2dns.py script to detect envents from docker daemon. 
+The main "drawback" with docker containers is to deal with ip address change at each reboot. There are solutions that help a lot with this but at a cost of complexity that is not productive at all for just building simple labs. Dock2dns create and remove dnsentry in skydns2 each time you start/stop containers. This way communication between containers is as simple as just using a name. Say you have a container with hostname A and another with hostname B. If you want to ping A from B you just have to ping it like ping B. dock2dns do the dns discovery job for you.
+
+Docker lab use etcd and skydns2 as dynamic dns registration tools with dock2dns.py script to detect events from docker daemon. 
 
 How to use it:
 ==============
