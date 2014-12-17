@@ -25,8 +25,9 @@ Initial setup
 Build and/or grab images :
 
 ```
+cd shinken-allinone-1.4
+pwd=$(pwd)
 docker pull mongo:latest
-base=$(pwd)
 cd $pwd/dockerfiles/centos6-ssh && make build
 cd $pwd/dockerfiles/shinken-1.4 && make build
 cd $pwd/dockerfiles/shinken-allinone-1.4 && make build
