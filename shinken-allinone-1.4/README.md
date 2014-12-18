@@ -19,21 +19,6 @@ This lab is based on the following images :
 - thruk image from docker-lab
 - shinken 1.4 image from docker-lab
 
-Initial setup
-=============
-
-Build and/or grab images :
-
-```
-cd shinken-allinone-1.4
-pwd=$(pwd)
-docker pull mongo:latest
-cd $pwd/../dockerfiles/centos-ssh && make build
-cd $pwd/../dockerfiles/shinken-1.4 && make build
-cd $pwd/../dockerfiles/shinken-allinone-1.4 && make build
-cd $pwd/../dockerfiles/thruk && make build
-```
-
 Run
 ===
 
