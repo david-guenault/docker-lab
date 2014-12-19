@@ -31,7 +31,7 @@ skydns:
         - ETCD_MACHINES=172.17.42.1:4001
     ports:
         - 172.17.42.1:53:53/udp
-    command: -nameservers=10.20.0.1:53 -domain=dock2dns.lan -addr=0.0.0.0:53 -verbose 
+    command: -nameservers=8.8.8.8:53 -domain=dock2dns.lan -addr=0.0.0.0:53 -verbose 
     volumes:
         - /etc/localtime:/etc/localtime:ro
 
