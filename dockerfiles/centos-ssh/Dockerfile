@@ -18,7 +18,7 @@ RUN 	echo 'root:root' | chpasswd
 RUN	ssh-keygen -t dsa -f /etc/ssh/ssh_host_dsa_key -q -N ""
 RUN	ssh-keygen -t rsa -f /etc/ssh/ssh_host_rsa_key -q -N ""
 
-# fix 
+# fix ssh service
 RUN 	sed -ri 's/UsePAM yes/#UsePAM yes/g' /etc/ssh/sshd_config
 RUN 	sed -ri 's/#UsePAM no/UsePAM no/g' /etc/ssh/sshd_config
 
