@@ -1,7 +1,7 @@
 # Shinken from master branch 
 # VERSION	2.0.3
 
-FROM     	centos:centos6	
+FROM     	debian:latest
 MAINTAINER	David GUENAULT
 
 RUN	mkdir -p /usr/sbin
