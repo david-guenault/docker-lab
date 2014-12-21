@@ -5,7 +5,7 @@ FROM     	dguenault/centos-ssh:6
 MAINTAINER	David GUENAULT
 
 # prerequisites
-RUN     yum -y install python-pycurl python-setuptools git vim-enhanced python-paramiko sysstat wget curl python-pyro
+RUN     yum -y install python-pycurl python-setuptools git vim-enhanced python-paramiko sysstat wget curl python-pyro net-snmp net-snmp-utils perl-Net-SNMP
 
 # install shinken
 RUN	adduser shinken
@@ -19,26 +19,15 @@ RUN     chown shinken:shinken /var/run/shinken /var/log/shinken /home/shinken/sh
 
 # install supervisor and configuration 
 ADD     files/supervisor/supervisord.conf /etc/supervisord.conf
-ADD     files/supervisor/sshd.conf /etc/supervisord.d/
+ADD     files/supervisor/snmpd.conf /etc/supervisord.d/
 
-# config 
+# fix plugins path in shinken resources config 
 RUN	sed -i "s/\/usr\/lib\/nagios\/plugins/\/usr\/lib64\/nagios\/plugins/g" /etc/shinken/resource.cfg
 
-# modules and packs
-# RUN	su - shinken -c "shinken --init && \
-# 	shinken install linux-ssh && \
-# 	shinken install webui && \
-# 	shinken install auth-cfg-password && \
-# 	shinken install logstore-sqlite && \
-# 	shinken install livestatus"
+# little fix on linux pack
+RUN     sed -i "s/-q -k -y/-q -k -y -g -2/g" /etc/shinken/packs/os/linux/commands.cfg
 
-
-# Expose needed tcp ports
-EXPOSE  7766
-EXPOSE  7767
-EXPOSE  7768
-EXPOSE  7769
-EXPOSE  7770
-EXPOSE  7771
-EXPOSE  7772
+# fix snmpd configuration
+RUN     sed -i "/^view/d" /etc/snmp/snmpd.conf
+RUN     echo "view    systemview    included   .1" >> /etc/snmp/snmpd.conf
 
