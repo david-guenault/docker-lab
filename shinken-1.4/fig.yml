@@ -1,0 +1,74 @@
+# vim: tabstop=4 shiftwidth=4 expandtab
+
+# simple shinken 1.4.4 setup (1 daemon = 1 container ) with mongodb and thruk frontend
+# config is mounted as a volume so that it can be edited by hand outside the docker container
+
+mongo:
+    image: mongo:latest
+    hostname: mongo
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf
+
+arbiter:
+    image: dguenault/shinken-arbiter:1.4.4
+    hostname: arbiter1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf
+        - shinken-specific.cfg:/etc/shinken/shinken-specific.cfg
+
+poller1:
+    image: dguenault/shinken-poller:1.4.4
+    hostname: poller1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf
+        - shinken-specific.cfg:/etc/shinken/shinken-specific.cfg
+
+poller2:
+    image: dguenault/shinken-poller:1.4.4
+    hostname: poller2
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf
+        - shinken-specific.cfg:/etc/shinken/shinken-specific.cfg
+
+receiver:
+    image: dguenault/shinken-receiver:1.4.4
+    hostname: receiver1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf
+        - shinken-specific.cfg:/etc/shinken/shinken-specific.cfg
+
+reactionner:
+    image: dguenault/shinken-reactionner:1.4.4
+    hostname: reactionner1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf
+        - shinken-specific.cfg:/etc/shinken/shinken-specific.cfg
+
+broker:
+    image: dguenault/shinken-broker:1.4.4
+    hostname: broker1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf
+        - shinken-specific.cfg:/etc/shinken/shinken-specific.cfg
+
+scheduler:
+    image: dguenault/shinken-scheduler:1.4.4
+    hostname: scheduler1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf
+        - shinken-specific.cfg:/etc/shinken/shinken-specific.cfg
+
+thruk:
+    image: dguenault/thruk:latest
+    hostname: thruk
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf    
