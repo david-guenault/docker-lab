@@ -1,0 +1,12 @@
+# vim: tabstop=4 shiftwidth=4 expandtab
+
+# just thruk
+
+thruk:
+    image: dguenault/thruk:latest
+    hostname: thruk
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf    
+    ports:
+        - 10.10.0.5:8080:80

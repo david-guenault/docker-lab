@@ -1,0 +1,6 @@
+mongo:
+    image: mongo:latest
+    hostname: mongo
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf
