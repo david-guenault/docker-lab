@@ -4,6 +4,9 @@
 FROM     	dguenault/shinken:1.4.4
 MAINTAINER	David GUENAULT
 
+# add pymongo
+RUN     yum -y install pymongo pymongo-gridfs
+
 # supervisord config for arbiter daemon
 ADD     files/supervisor/shinken.conf /etc/supervisord.d/
 
