@@ -5,7 +5,7 @@ FROM     	dguenault/shinken:1.4.4
 MAINTAINER	David GUENAULT
 
 # snmp and nagios plugins
-RUN     yum -y install nagios-plugins-all
+RUN     yum -y install nagios-plugins-all pymongo pymongo-gridfs
 
 # manubulon plugins
 RUN     wget http://nagios.manubulon.com/check_snmp_load.pl && \
