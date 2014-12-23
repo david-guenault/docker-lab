@@ -14,11 +14,16 @@ import os
 
 class figproject():
 
-    def __init__(self, file = None, socket = None):
+    def __init__(self, file = None, socket = None, project = None):
         self.file = file
         self.socket = socket
         self.client =  Client(base_url = self.socket)
-        self.project = self.loadProject()
+
+        if not project:
+            self.project  = self.loadProject() 
+        else:
+            self.project = project
+
         self.projectname = re.sub("[^\w]","",os.path.abspath(os.path.dirname(sys.argv[0])).split("/")[-1])
 
     def log(self,message):
@@ -51,9 +56,8 @@ class figproject():
         self.log("+%s+%s+%s+" % (40*"-",20*"-",15*"-"))
         for container in containers:
             for name in container["Names"]:
-                if name.startswith("/%s" % self.projectname):
+                if name.startswith("/%s" % self.projectname) and not ":" in name and name.count("/") == 1:
                     ip = self.inspect(container["Id"])["NetworkSettings"]["IPAddress"]
-                    # projectcontainers.append([])
                     self.log("|%40s|%20s|%15s|" % (name[1:], name.split("_")[1], ip))
         self.log("+%s+%s+%s+" % (40*"-",20*"-",15*"-"))
 
@@ -66,14 +70,20 @@ if __name__ == '__main__':
     parser = optparse.OptionParser('', version="%prog ")
     parser.add_option('--file', dest="file", help="""fig.yml project file""",default="fig.yml")
     parser.add_option('--socket', dest="socket", help="""fig.yml project file""", default="unix://var/run/docker.sock")
+    parser.add_option("--project", dest="project", help="""project name""", default=None)
    
     opts, args = parser.parse_args() 
 
     if opts.file:
         FILE = opts.file
 
+    if opts.project:
+        PROJECT = opts.project
+    else:
+        PROJECT = None
+
     if opts.socket:
         SOCKET = opts.socket
 
-    f = figproject(file = FILE, socket = SOCKET)
+    f = figproject(file = FILE, socket = SOCKET, project = PROJECT)
     f.showIP()
