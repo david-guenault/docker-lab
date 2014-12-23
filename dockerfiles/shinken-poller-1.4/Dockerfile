@@ -26,8 +26,16 @@ RUN     wget http://nagios.manubulon.com/check_snmp_load.pl && \
             mv check_snmp_process.pl /usr/lib64/nagios/plugins && \
             chmod +x /usr/lib64/nagios/plugins/check_snmp_process.pl
 
+# check_shinken
 RUN     cp -a /home/shinken/shinken/libexec/check_shinken.py /usr/local/nagios/libexec/
 RUN     chmod +x /usr/local/nagios/libexec/check_shinken.py
+
+# latest pack mongo
+RUN     git clone https://github.com/shinken-monitoring/pack-mongodb.git && \
+           rm -Rf /etc/shinken/packs/databases/mongodb && \
+           cp -a pack-mongodb/pack /etc/shinken/packs/databases/mongodb && \
+           cp -a pack-mongodb/libexec/check_mongodb.py /usr/lib64/nagios/plugins/ && \
+           chmod +x /usr/lib64/nagios/plugins/check_mongodb.py
 
 # check_netint.pl
 RUN     wget https://raw.githubusercontent.com/willixix/WL-NagiosPlugins/master/check_netint.pl && \
