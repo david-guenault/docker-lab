@@ -1,18 +1,35 @@
 # vim: tabstop=4 shiftwidth=4 expandtab
 
-# simple shinken 1.4.4 setup (1 daemon = 1 container ) 
+# full shinken 1.4.4 setup (1 daemon = 1 container ) 
 # config is mounted as a volume so that it can be edited by hand outside the docker container
+# depend on the following projects :
+#  - mongo
+#  - dock2dns
 
 arbiter1:
     image: dguenault/shinken-arbiter:1.4.4
     hostname: arbiter1
+    links:
+        - poller1
+        - poller2
+        - poller3
+        - poller4
+        - poller5
+        - poller6
+        - scheduler1
+        - scheduler2
+        - broker1
+        - broker2
+        - reactionner1
+        - reactionner2
+        - receiver1
+        - receiver2
     volumes:
         - /etc/localtime:/etc/localtime:ro
         - resolv.conf:/etc/resolv.conf
         - shinken-specific.cfg:/etc/shinken/shinken-specific.cfg
         - hosts-shinken.cfg:/etc/shinken/hosts/hosts-shinken.cfg
-    ports:
-        - 10.10.0.5:9001:9001
+        - checkmyws-plugins/shinken/pack-checkmyws/pack:/etc/shinken/packs/checkmyws
 
 arbiter2:
     image: dguenault/shinken-arbiter:1.4.4
@@ -22,6 +39,23 @@ arbiter2:
         - resolv.conf:/etc/resolv.conf
         - shinken-specific.cfg:/etc/shinken/shinken-specific.cfg
         - hosts-shinken.cfg:/etc/shinken/hosts/hosts-shinken.cfg
+        - checkmyws-plugins/shinken/pack-checkmyws/pack:/etc/shinken/packs/checkmyws
+    links:
+        - arbiter1
+        - poller1
+        - poller2
+        - poller3
+        - poller4
+        - poller5
+        - poller6
+        - scheduler1
+        - scheduler2
+        - broker1
+        - broker2
+        - reactionner1
+        - reactionner2
+        - receiver1
+        - receiver2
 
 poller1:
     image: dguenault/shinken-poller:1.4.4
@@ -78,6 +112,8 @@ receiver2:
     volumes:
         - /etc/localtime:/etc/localtime:ro
         - resolv.conf:/etc/resolv.conf
+    links:
+        - receiver1
 
 reactionner1:
     image: dguenault/shinken-reactionner:1.4.4
@@ -92,13 +128,12 @@ reactionner2:
     volumes:
         - /etc/localtime:/etc/localtime:ro
         - resolv.conf:/etc/resolv.conf
+    links:
+        - reactionner1
 
 broker1:
     image: dguenault/shinken-broker:1.4.4
     hostname: broker1
-    ports: 
-        - 7767:7767
-        - 50000:50000
     volumes:
         - /etc/localtime:/etc/localtime:ro
         - resolv.conf:/etc/resolv.conf
@@ -106,12 +141,11 @@ broker1:
 broker2:
     image: dguenault/shinken-broker:1.4.4
     hostname: broker2
-    ports: 
-        - 8767:7767
-        - 50001:50000
     volumes:
         - /etc/localtime:/etc/localtime:ro
         - resolv.conf:/etc/resolv.conf
+    links:
+        - broker1
 
 scheduler1:
     image: dguenault/shinken-scheduler:1.4.4
@@ -126,4 +160,6 @@ scheduler2:
     volumes:
         - /etc/localtime:/etc/localtime:ro
         - resolv.conf:/etc/resolv.conf
+    links:
+        - scheduler1
 

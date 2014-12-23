@@ -42,6 +42,12 @@ RUN     wget https://raw.githubusercontent.com/willixix/WL-NagiosPlugins/master/
             mv check_netint.pl /usr/local/nagios/libexec && \ 
             chmod +x /usr/lib64/nagios/plugins/check_netint.pl
 
+# check_myws
+RUN     git clone https://github.com/checkmyws/checkmyws-plugins.git && \
+            cp checkmyws-plugins/shinken/pack-checkmyws/libexec/check_mywebsite.py /usr/lib64/nagios/plugins/ && \
+            chmod +x /usr/lib64/nagios/plugins/check_mywebsite.py && \
+            pip install docopt checkmyws-python
+
 # daemons
 ADD     files/supervisor/shinken.conf /etc/supervisord.d/
 
