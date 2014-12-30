@@ -1,6 +1,6 @@
 BROWSER=/usr/bin/google-chrome
 DOCKER=/usr/bin/docker
-DOCKERENTER=/usr/local/bin/docker-enter
+DOCKERENTER=/usr/bin/docker-enter
 IMAGE=$(REPO)/$(NAME):$(TAG)
 REPO=dguenault
 
