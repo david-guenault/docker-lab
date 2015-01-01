@@ -48,7 +48,7 @@ RUN     shinken --init && \
             shinken install file-tag && \
             shinken install mod-mongodb && \
             shinken install webui && \
-            shinken install livestatus && \
+#            shinken install livestatus && \
             shinken install logstore-mongodb && \
             shinken install ui-graphite && \
             shinken install sqlitedb && \
@@ -60,3 +60,11 @@ RUN     shinken --init && \
             shinken install retention-mongodb && \
             shinken install auth-cfg-password
 
+# temp : install livestatus from git 1.1
+RUN      git clone https://github.com/shinken-monitoring/mod-livestatus.git && \
+            cd mod-livestatus && \
+            git checkout tags/1.1 && \
+            cp -a /mod-livestatus/module /var/lib/shinken/modules/livestatus && \
+            chown -R shinken:shinken /var/lib/shinken/modules/livestatus && \
+            cp /mod-livestatus/etc/modules/livestatus.cfg /etc/shinken/modules/livestatus.cfg
+            
