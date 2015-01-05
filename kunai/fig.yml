@@ -1,0 +1,55 @@
+# vim: tabstop=4 shiftwidth=4 expandtab
+
+# just kunai
+
+k1:
+    image: dguenault/kunai:latest
+    hostname: k1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf    
+    command: start
+
+k2:
+    image: dguenault/kunai:latest
+    hostname: k2
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf    
+        - local.json:/etc/kunai/local.json
+    command: start
+    links:
+        - k1
+
+k3:
+    image: dguenault/kunai:latest
+    hostname: k3
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf    
+        - local.json:/etc/kunai/local.json
+    command: start
+    links:
+        - k1
+
+k4:
+    image: dguenault/kunai:latest
+    hostname: k4
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf    
+        - local.json:/etc/kunai/local.json
+    command: start
+    links:
+        - k1
+
+k5:
+    image: dguenault/kunai:latest
+    hostname: k5
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - resolv.conf:/etc/resolv.conf    
+        - local.json:/etc/kunai/local.json
+    command: start
+    links:
+        - k1

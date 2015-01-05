@@ -8,7 +8,7 @@ RUN     git clone https://github.com/naparuba/kunai.git && \
             cd kunai && \
             python setup.py install
 
-# install supervisor and configuration 
-# ADD     files/supervisor/supervisord.conf /etc/supervisord.conf 
-# ADD     files/supervisor/kunai.conf /etc/supervisord.d/ 
+EXPOSE 6768
+EXPOSE 6769
 
+ENTRYPOINT ["/usr/bin/kunai"]
