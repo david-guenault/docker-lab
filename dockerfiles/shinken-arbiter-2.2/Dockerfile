@@ -15,7 +15,10 @@ ADD         files/supervisor/shinken.conf /etc/supervisord.d/
 RUN     shinken --init && \
             shinken install mongodb && \
             shinken install check_mywebsite && \
-            shinken install arbiter
+            shinken install arbiter2 && \
+            shinken install check_mywebsite && \
+            pip install docopt checkmyws-python
+
 
 # port
 EXPOSE 7770

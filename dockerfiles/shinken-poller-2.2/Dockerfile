@@ -33,11 +33,19 @@ RUN     pip install docopt checkmyws-python
 # packs and plugins
 RUN     shinken --init && \
             shinken install mongodb && \
-            shinken install check_mywebsite
+            shinken install check_mywebsite && \
+            shinken install linux-ssh && \
+            shinken install linux-snmp && \
+            shinken install arbiter2 && \
+            shinken install check_mywebsite && \
+            pip install docopt checkmyws-python
 
 # put check_netint.pl in nagios plugins folder
 RUN     cp -a /var/lib/shinken/libexec/check_netint.pl /usr/lib64/nagios/plugins/ && \
             chmod +x /usr/lib64/nagios/plugins/
+
+# fix user shinken to run nagios plugins
+RUN     usermod -a -G nagios shinken
 
 # daemon
 ADD     files/supervisor/shinken.conf /etc/supervisord.d/
