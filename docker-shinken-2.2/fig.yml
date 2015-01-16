@@ -1,0 +1,59 @@
+# vim: tabstop=4 shiftwidth=4 expandtab
+
+# full shinken 2.2 setup (1 daemon = 1 container ) 
+
+arbiter1:
+    image: shinken/shinken:2.2
+    hostname: arbiter1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+    links:
+        - broker1
+        - poller1
+        - scheduler1
+        - reactionner1
+        - receiver1
+    expose:
+        - "7770"
+
+broker1:
+    image: shinken/shinken:2.2
+    hostname: broker1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+    links:
+        - scheduler1
+        - poller1
+        - reactionner1
+        - receiver1
+    expose:
+        - ""
+        - "50000"
+
+receiver1:
+    image: shinken/shinken:2.2
+    hostname: receiver1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+
+reactionner1:
+    image: shinken/shinken-2.2
+    hostname: reactionner1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+    links:
+        - scheduler1
+
+poller1:
+    image: shinken/shinken-2.2
+    hostname: poller1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+    links:
+        - scheduler1
+
+scheduler1:
+    image: shinken/shinken-2.2
+    hostname: scheduler1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
