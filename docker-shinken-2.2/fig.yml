@@ -7,6 +7,7 @@ arbiter1:
     hostname: arbiter1
     volumes:
         - /etc/localtime:/etc/localtime:ro
+        - config/shinken:/etc/shinken
     links:
         - broker1
         - poller1
@@ -15,6 +16,7 @@ arbiter1:
         - receiver1
     expose:
         - "7770"
+    command: /usr/bin/shinken-arbiter -c /etc/shinken/shinken.cfg
 
 broker1:
     image: shinken/shinken:2.2
@@ -27,33 +29,46 @@ broker1:
         - reactionner1
         - receiver1
     expose:
-        - ""
+        - "7772"
         - "50000"
+    command: /usr/bin/shinken-broker -c /etc/shinken/daemons/brokerd.ini
 
 receiver1:
     image: shinken/shinken:2.2
     hostname: receiver1
     volumes:
         - /etc/localtime:/etc/localtime:ro
+    expose:
+        - "7773"
+    command: /usr/bin/shinken-receiver -c /etc/shinken/daemons/receiverd.ini
 
 reactionner1:
-    image: shinken/shinken-2.2
+    image: shinken/shinken:2.2
     hostname: reactionner1
     volumes:
         - /etc/localtime:/etc/localtime:ro
     links:
         - scheduler1
+    expose:
+        - "7769"
+    command: /usr/bin/shinken-reactionner -c /etc/shinken/daemons/reactionnerd.ini
 
 poller1:
-    image: shinken/shinken-2.2
+    image: shinken/shinken:2.2
     hostname: poller1
     volumes:
         - /etc/localtime:/etc/localtime:ro
     links:
         - scheduler1
+    expose:
+        - "7771"
+    command: /usr/bin/shinken-poller -c /etc/shinken/daemons/pollerd.ini
 
 scheduler1:
-    image: shinken/shinken-2.2
+    image: shinken/shinken:2.2
     hostname: scheduler1
     volumes:
         - /etc/localtime:/etc/localtime:ro
+    expose:
+        - "7768"
+    command: /usr/bin/shinken-scheduler -c /etc/shinken/daemons/schedulerd.ini

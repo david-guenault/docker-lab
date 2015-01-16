@@ -1,8 +1,12 @@
 TAG=2.2
-PROJECT=shinken22
+REPO=shinken
+NAME=shinken
+PROJECT=dockershinken22
 FIG=/usr/local/bin/fig
 DOCKER=/usr/bin/docker
 DOCKERENTER=/usr/bin/docker-enter
+IMAGE=$(REPO)/$(NAME):$(TAG)
+ID=shinken22getconf
 
 clean: 
 	cd docker-files/shinken-$(TAG); \
@@ -32,4 +36,10 @@ stop:
 enter:
 	$(DOCKERENTER) $(PROJECT)_$(DAEMON)_1
 
-.PHONY: clean build kill rm rebuild start stop enter
+conf:
+	docker run --name $(ID) $(IMAGE) echo
+	- @rm -Rf config/*
+	$(DOCKER) cp $(ID):/etc/shinken ./config/
+	docker rm $(ID)
+
+.PHONY: clean build kill rm rebuild start stop enter conf
