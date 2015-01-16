@@ -9,7 +9,8 @@ ENV                   TAG 2.2
 RUN    apt-get update && apt-get -y upgrade
 
 # prerequisites
-RUN   apt-get -y install python-pycurl python-pip git vim-nox python-paramiko sysstat wget curl python-pymongo python-gridfs python-sqlite2
+RUN     apt-get -y install python-pycurl python-pip git vim-nox python-paramiko sysstat wget curl \ 
+            python-pymongo python-gridfs python-pysqlite2
 
 # install shinken
 RUN     useradd shinken && \
