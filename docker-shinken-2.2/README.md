@@ -1,4 +1,4 @@
-# Shinken 2.2 as docker application
+# Shinken 2.2 as a docker application
 
 ## Prerequisites:
 
@@ -50,6 +50,261 @@ Once finished you can see that the image has been added to your docker images
 docker images
 REPOSITORY                      TAG                 IMAGE ID            CREATED             VIRTUAL SIZE
 shinken/shinken                 2.2                 10f9da402621        16 minutes ago      491.4 MB
+```
+
+## Quick Start
+
+```
+make build start
+```
+
+## Using
+
+### Docker explained
+
+Ok everything is now setup. Let start to use. Fig is a simple (but powerfull) orchestration tool for docker. Without fig you have to deal with a lot of docker commands, so fig is curently the most simple and efficient way to use multicontainer applications. With shinken we have 6 daemons, each responsible of a specific task. 
+
+- arbiter load, parse and send the configuration to others daemons
+- scheduler ... schedule the checks execution
+- poller execute the check and send back results to the scheduler
+- broker take monitoring data from the scheduler and send it to others backends (databases, metrology, webinterface ...)
+- reactionner take alerting data and notify user (by email or sms for exemple)
+- receiver is just a queue manager used to receive external commands
+
+In a simple setup we have to launch 6 docker containers each with a specific command. For exemple the arbiter is launched the following way :
+
+```
+docker run -d --name arbiter1 --hostname arbiter1 -v /etc/localtime:/etc/localtime:ro -v $(pwd)/config/shinken:/etc/shinken shinken/shinken:2.2 /usr/bin/shinken-arbiter -c /etc/shinken/shinken.cfg
+```
+
+You will notice the following argument "-v $(pwd)/config/shinken:/etc/shinken". This mount the local config/shinken folder into the container at /etc/shinken. This way we can configure shinken without entering the container every time we recreate the container. Local pathes must be absolute path. This is why i prepend with $(pwd) that will result in an absolute path. 
+
+With the same logic we can launch all of our containers 
+
+```
+docker run -d --name receiver1 --hostname receiver1 -v /etc/localtime:/etc/localtime:ro shinken/shinken:2.2 /usr/bin/shinken-receiver -c /etc/shinken/daemons/receiverd.ini
+docker run -d --name scheduler1 --hostname scheduler1 -v /etc/localtime:/etc/localtime:ro shinken/shinken:2.2 /usr/bin/shinken-scheduler -c /etc/shinken/daemons/schedulerd.ini
+docker run -d --name reactionner1 --hostname reactionner1 -v /etc/localtime:/etc/localtime:ro shinken/shinken:2.2 /usr/bin/shinken-reactionner -c /etc/shinken/daemons/reactionnerd.ini
+docker run -d --name poller1 --hostname poller1 -v /etc/localtime:/etc/localtime:ro shinken/shinken:2.2 /usr/bin/shinken-poller -c /etc/shinken/daemons/pollerd.ini
+docker run -d --name broker1 --hostname broker1 -v /etc/localtime:/etc/localtime:ro shinken/shinken:2.2 /usr/bin/shinken-broker -c /etc/shinken/daemons/brokerd.ini
+docker run -d --name arbiter1 --hostname arbiter1 -v /etc/localtime:/etc/localtime:ro -v $(pwd)config/shinken:/etc/shinken  shinken/shinken:2.2 /usr/bin/shinken-arbiter -c /etc/shinken/shinken.cfg
+
+```
+
+Nice ! ... but this won't work ! sad but true ... Every time you start a container a new ip is defined in it (docker way). So if we look in the configuration file (poller-master.cfg for example) you will notice that we use the host name poller1. Arbiter have to send the poller configuration to poller1 but have no idea how to resolve it. We have to find a way to tell each daemon what is the ip of the others. Every time you launch a container docker mount /etc/hosts as a volume and add an entry in it. Let give an example
+
+```
+docker run -ti --rm busybox cat /etc/hosts
+10.0.8.14   da9f29e9a50b
+127.0.0.1   localhost
+::1 localhost ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+```
+
+We just launched a busybox container and see what is inside the /etc/hosts file. docker take the name of the container and the ip and add an entry to the /etc/hosts file. The default name is the container id. 
+
+```
+docker ps -a | awk '{print $1}'
+CONTAINER ID
+0a738b0ac201
+```
+
+We need something more relevant. So just specify the hostname
+
+```
+docker run -ti --rm --name mycontainer1 --hostname mycontainer1 busybox cat /etc/hosts
+10.0.8.16   mycontainer1
+127.0.0.1   localhost
+::1 localhost ip6-localhost ip6-loopback
+fe00::0 ip6-localnet
+ff00::0 ip6-mcastprefix
+ff02::1 ip6-allnodes
+ff02::2 ip6-allrouters
+```
+Yeah !
+
+Ok but now i need a two containers setup where C2 can resolve C1. Links are the answer ! First start a container in background (C1 for the moment). Links use the container name to establish the relation between two runings containers. 
+
+```
+docker run -d --name C1 --hostname C1 busybox top
+```
+
+Now start C2 container linked to C1
+
+```
+docker run -ti --hostname C2 --link C1:C1 busybox ping C1
+PING C1 (10.0.8.17): 56 data bytes
+64 bytes from 10.0.8.17: seq=0 ttl=64 time=0.234 ms
+64 bytes from 10.0.8.17: seq=1 ttl=64 time=0.132 ms
+64 bytes from 10.0.8.17: seq=2 ttl=64 time=0.097 ms
+64 bytes from 10.0.8.17: seq=3 ttl=64 time=0.099 ms
+```
+
+And it just work !
+
+Ok now we have to establish links between each shinken container. First we have to now which daemons talk to others. In the default setup here is the answer :
+
+- arbiter talk to every others daemons (have to send configuration to every daemons). If arbiter is a spare it talk to every others daemon except the arbiter master.
+- reactionner(s) talk to scheduler(s)
+- poller(s) talk to scheduler(s)
+- broker(s) talk to every other daemons except arbiter(s)
+- receiver does not talk ;-)
+- scheduler(s) does not talk ;-)
+
+Now we can say in which order every daemons should start. 
+
+- receiver (because it does not need to talk to others)
+- scheduler (it does not talk to others daemons)
+- reactionner
+- poller
+- broker
+- arbiter
+
+So back to our first example here is the good setup. 
+
+```
+docker run -d --name receiver1 --hostname receiver1 -v /etc/localtime:/etc/localtime:ro shinken/shinken:2.2 /usr/bin/shinken-receiver -c /etc/shinken/daemons/receiverd.ini
+docker run -d --name scheduler1 --hostname scheduler1 -v /etc/localtime:/etc/localtime:ro shinken/shinken:2.2 /usr/bin/shinken-scheduler -c /etc/shinken/daemons/schedulerd.ini
+docker run -d --name reactionner1 --hostname reactionner1 -v /etc/localtime:/etc/localtime:ro --link scheduler1:scheduler1 shinken/shinken:2.2 /usr/bin/shinken-reactionner -c /etc/shinken/daemons/reactionnerd.ini
+docker run -d --name poller1 --hostname poller1 -v /etc/localtime:/etc/localtime:ro --link scheduler1:scheduler1 shinken/shinken:2.2 /usr/bin/shinken-poller -c /etc/shinken/daemons/pollerd.ini
+docker run -d --name broker1 --hostname broker1 -v /etc/localtime:/etc/localtime:ro --link scheduler1:scheduler1 --link receiver1:receiver1 --link poller1:poller1 --link reactionner1:reactionner1 shinken/shinken:2.2 /usr/bin/shinken-broker -c /etc/shinken/daemons/brokerd.ini
+docker run -d --name arbiter1 --hostname arbiter1 -v /etc/localtime:/etc/localtime:ro -v $(pwd)config/shinken:/etc/shinken  --link scheduler1:scheduler1 --link receiver1:receiver1 --link poller1:poller1 --link reactionner1:reactionner1 --link broker1:broker1 shinken/shinken:2.2 /usr/bin/shinken-arbiter -c /etc/shinken/shinken.cfg
+```
+And now everything is up and running. But what a pain in the ass if we just have to introduce more daemons ....
+
+## Fig 
+
+Fig achieve the same goal (and much more) but everything is defined in a comprehensive YAML file. See the fig.yml file for a complete example, but you can see a sample of the exemple right here: 
+
+```
+arbiter1:
+    image: shinken/shinken:2.2
+    hostname: arbiter1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - config/shinken:/etc/shinken
+    links:
+        - broker1
+        - poller1
+        - scheduler1
+        - reactionner1
+        - receiver1
+    expose:
+        - "7770"
+    command: /usr/bin/shinken-arbiter -c /etc/shinken/shinken.cfg
+
+broker1:
+    image: shinken/shinken:2.2
+    hostname: broker1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+    links:
+        - scheduler1
+        - poller1
+        - reactionner1
+        - receiver1
+    expose:
+        - "7772"
+        - "50000"
+    command: /usr/bin/shinken-broker -c /etc/shinken/daemons/brokerd.ini
+```
+Much more readable ! and much more usable, you can find how to control your project right after :
+
+- fig up -d (this will create/recreate and start the project each time you launch the command)
+- fig kill (kill every container in the project. Fast but hardcore)
+- fig stop (stop the whole project)
+- fig start (start a previously created project with fig up)
+- fig ps (display a comprehensive list of the project containers)
+
+```          
+fig ps   
+Name                           Command               State          Ports        
+---------------------------------------------------------------------------------------------
+dockershinken22_arbiter1_1       /usr/bin/shinken-arbiter - ...   Up      7770/tcp            
+dockershinken22_broker1_1        /usr/bin/shinken-broker -c ...   Up      50000/tcp, 7772/tcp 
+dockershinken22_poller1_1        /usr/bin/shinken-poller -c ...   Up      7771/tcp            
+dockershinken22_reactionner1_1   /usr/bin/shinken-reactionn ...   Up      7769/tcp            
+dockershinken22_receiver1_1      /usr/bin/shinken-receiver  ...   Up      7773/tcp            
+dockershinken22_scheduler1_1     /usr/bin/shinken-scheduler ...   Up      7768/tcp  
+```
+
+## Adding daemons
+
+Let say you want to test shinken scalability by adding a poller to your project. It is really easy. 
+
+First you have to add the poller to the shinken configuration. Create a new file named config/shinken/pollers/poller2.cfg and add the following content. 
+
+```
+define poller {
+    poller_name  poller2
+    address         poller2
+    port            7771
+    spare               0   
+    manage_sub_realms   0   
+    min_workers         0   
+    max_workers         0   
+    processes_by_worker 256 
+    polling_interval    1   
+    timeout             3   
+    data_timeout        120 
+    max_check_attempts  3   
+    check_interval      60  
+    modules     
+    use_ssl           0
+    hard_ssl_name_check   0
+    realm   All
+}
+```
+
+Edit the fig.yml and add the following 
+
+```
+poller2:
+    image: shinken/shinken:2.2
+    hostname: poller2
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+    links:
+        - scheduler1
+    expose:
+        - "7771"
+    command: /usr/bin/shinken-poller -c /etc/shinken/daemons/pollerd.ini
+```
+
+Don't forget to modify the definition of arbiter1 so it link to poller2
+
+```
+arbiter1:
+    ...
+    links:
+        - broker1
+        - poller1
+        - poller2
+        ...
+```
+
+Then you just have to start your project
+
+```
+fig up -d
+```
+
+And control that everything is up and running
+
+```
+fig ps
+             Name                           Command               State          Ports        
+---------------------------------------------------------------------------------------------
+dockershinken22_arbiter1_1       /usr/bin/shinken-arbiter - ...   Up      7770/tcp            
+dockershinken22_broker1_1        /usr/bin/shinken-broker -c ...   Up      50000/tcp, 7772/tcp 
+dockershinken22_poller1_1        /usr/bin/shinken-poller -c ...   Up      7771/tcp            
+dockershinken22_poller2_1        /usr/bin/shinken-poller -c ...   Up      7771/tcp            
+dockershinken22_reactionner1_1   /usr/bin/shinken-reactionn ...   Up      7769/tcp            
+dockershinken22_receiver1_1      /usr/bin/shinken-receiver  ...   Up      7773/tcp            
+dockershinken22_scheduler1_1     /usr/bin/shinken-scheduler ...   Up      7768/tcp           
 ```
 
 
