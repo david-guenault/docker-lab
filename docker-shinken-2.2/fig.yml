@@ -1,5 +1,3 @@
-# vim: tabstop=4 shiftwidth=4 expandtab
-
 # full shinken 2.2 setup (1 daemon = 1 container ) 
 
 arbiter1:
