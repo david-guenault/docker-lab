@@ -4,17 +4,17 @@ NAME=shinken
 PROJECT=dockershinken22
 FIG=/usr/local/bin/fig
 DOCKER=/usr/bin/docker
-DOCKERENTER=/usr/bin/docker-enter
+DOCKERENTER=/usr/local/bin/docker-enter
 IMAGE=$(REPO)/$(NAME):$(TAG)
 ID=shinken22getconf
 
 clean: 
-	cd docker-files/shinken-$(TAG); \
-	$(MAKE) $(TARGET);
+	cd docker-files/$(NAME)-$(TAG); \
+	$(MAKE) clean;
 
 build: 
-	cd docker-files/shinken-$(TAG); \	
-	$(MAKE) $(TARGET);
+	cd docker-files/$(NAME)-$(TAG); \
+	$(MAKE) build;
 
 kill:
 	$(FIG) kill
