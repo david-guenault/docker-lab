@@ -2,36 +2,67 @@
 # VERSION    2.2
 
 FROM                debian:7
-MAINTAINER      David GUENAULT
+MAINTAINER      Shinken
 ENV                   TAG 2.2
 
-# update base image
-RUN    apt-get update && apt-get -y upgrade
-
-# prerequisites
-RUN     apt-get -y install python-pycurl python-pip git vim-nox python-paramiko sysstat wget curl \ 
+#########################################################
+# Prerequisites
+#########################################################
+RUN    apt-get update && apt-get -y upgrade && \
+           apt-get -y install python-pycurl python-pip git vim-nox python-paramiko sysstat wget curl \ 
             python-pymongo python-gridfs python-pysqlite2
 
+#########################################################
 # install shinken
+#########################################################
+
 RUN     useradd shinken && \
             mkdir -p /home/shinken && \
             cd /home/shinken && git clone https://github.com/naparuba/shinken.git && \
             cd /home/shinken/shinken && git checkout tags/$TAG && \
-            cd /home/shinken/shinken && python setup.py install
-
-RUN     mkdir -p /var/run/shinken /var/log/shinken && \
+            cd /home/shinken/shinken && python setup.py install && \
+            mkdir -p /var/run/shinken /var/log/shinken && \
             chown shinken:shinken /var/run/shinken /var/log/shinken /home/shinken /home/shinken/shinken
 
-# enable debug on daemons 
+##  enable debug on daemons (optional)
 RUN   sed -i "s/log_level=.*/log_level=DEBUG/g" /etc/shinken/daemons/pollerd.ini
 RUN   sed -i "s/log_level=.*/log_level=DEBUG/g" /etc/shinken/daemons/brokerd.ini
 RUN   sed -i "s/log_level=.*/log_level=DEBUG/g" /etc/shinken/daemons/reactionnerd.ini
 RUN   sed -i "s/log_level=.*/log_level=DEBUG/g" /etc/shinken/daemons/schedulerd.ini
 
-# fix nagios plugins path
-RUN    sed -i "s/\/usr\/lib\/nagios\/plugins/\/usr\/lib64\/nagios\/plugins/g" /etc/shinken/resource.d/paths.cfg
+#########################################################
+# plugins
+#########################################################
 
-# install modules 
+## Nagios plugins
+RUN   apt-get -y install nagios-plugins
+
+## manubulon plugins
+RUN     wget http://nagios.manubulon.com/check_snmp_load.pl && \
+            mv check_snmp_load.pl /usr/lib/nagios/plugins && \
+            chmod +x /usr/lib/nagios/plugins/check_snmp_load.pl && \
+            wget http://nagios.manubulon.com/check_snmp_storage.pl && \
+            mv check_snmp_storage.pl /usr/lib/nagios/plugins && \
+            chmod +x /usr/lib/nagios/plugins/check_snmp_storage.pl && \
+            mkdir -p /usr/local/nagios && \
+            ln -s /usr/lib/nagios/plugins /usr/local/nagios/libexec && \
+            wget http://nagios.manubulon.com/check_snmp_mem.pl && \
+            mv check_snmp_mem.pl /usr/lib/nagios/plugins && \
+            chmod +x /usr/lib/nagios/plugins/check_snmp_mem.pl && \
+            wget http://nagios.manubulon.com/check_snmp_mem.pl && \
+            mv check_snmp_mem.pl /usr/lib/nagios/plugins && \
+            chmod +x /usr/lib/nagios/plugins/check_snmp_mem.pl && \
+            wget http://nagios.manubulon.com/check_snmp_process.pl && \
+            mv check_snmp_process.pl /usr/lib/nagios/plugins && \
+            chmod +x /usr/lib/nagios/plugins/check_snmp_process.pl
+
+## prerequisites for check_mywebsite
+RUN     pip install docopt checkmyws-python
+
+
+#########################################################
+## install modules 
+#########################################################
 RUN     shinken --init && \
             shinken install ip-tag && \
             shinken install ws-arbiter && \
@@ -43,7 +74,7 @@ RUN     shinken --init && \
             shinken install file-tag && \
             shinken install mod-mongodb && \
             shinken install webui && \
-            shinken install livestatus && \
+            # shinken install livestatus && \
             shinken install logstore-mongodb && \
             shinken install ui-graphite && \
             shinken install sqlitedb && \
@@ -55,7 +86,9 @@ RUN     shinken --init && \
             shinken install retention-mongodb && \
             shinken install auth-cfg-password
 
+#########################################################
 # packs
+#########################################################
 RUN     shinken --init && \
             shinken install mongodb && \
             shinken install check_mywebsite && \
@@ -64,14 +97,18 @@ RUN     shinken --init && \
             shinken install linux-snmp && \
             pip install docopt checkmyws-python
 
-# remove shinken sources
+#########################################################
+# Cleanup and Hacks
+#########################################################
+
+## remove shinken sources
 RUN      rm -Rf /home/shinken/shinken
 
-# # temp : install livestatus from git 1.1
-# RUN      git clone https://github.com/shinken-monitoring/mod-livestatus.git && \
-#             cd mod-livestatus && \
-#             # git checkout tags/1.1 && \
-#             cp -a /mod-livestatus/module /var/lib/shinken/modules/livestatus && \
-#             chown -R shinken:shinken /var/lib/shinken/modules/livestatus && \
-#             cp /mod-livestatus/etc/modules/livestatus.cfg /etc/shinken/modules/livestatus.cfg
+## temp : install livestatus from git master as shinken.io version does not seems to work well
+RUN      git clone https://github.com/shinken-monitoring/mod-livestatus.git && \
+            cd mod-livestatus && \
+            # git checkout tags/1.1 && \
+            cp -a /mod-livestatus/module /var/lib/shinken/modules/livestatus && \
+            chown -R shinken:shinken /var/lib/shinken/modules/livestatus && \
+            cp /mod-livestatus/etc/modules/livestatus.cfg /etc/shinken/modules/livestatus.cfg
             
