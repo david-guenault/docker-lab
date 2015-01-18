@@ -307,4 +307,87 @@ dockershinken22_receiver1_1      /usr/bin/shinken-receiver  ...   Up      7773/t
 dockershinken22_scheduler1_1     /usr/bin/shinken-scheduler ...   Up      7768/tcp           
 ```
 
+## Testing module without rebuilding everything
+
+Say you want to test a release of a module (for example the broker module webui). It is possible to do it without rebuilding everything. You just have to use volumes. In shinken, modules are located in two specific places. The module itself is in /var/lib/shinken/modules/[modulename] and the configuration is located in /etc/shinken/modules/[modulename].cfg. Every module is located on a github repo at http://github.com/shinken-monitoring. webui sources are located at http://github.com/shinken-monitoring/mod-webui. 
+
+Grab the sources in the project folder
+
+```
+git clone https://github.com/shinken-monitoring/mod-webui
+```
+
+Edit the fig.yml file and add the following volume to broker1 definition
+
+```
+- mod-webui/module:/var/lib/shinken/modules/webui
+```
+
+And add the following volume to arbiter1 definition
+
+```
+- mod-webui/etc/modules/webui.cfg:/etc/shinken/modules/webui.cfg
+```
+
+Next you have to edit shinken broker definition (config/shinken/etc/shinken/brokers/broker-master.cfg) and add the module to the module directive
+
+```
+modules     livestatus, webui
+```
+
+Start the project
+
+```
+fig up -d
+```
+
+You can verify that everything is working by opening a browser and point to http://broker1:7767 (if you have a browser on the host running docker. If not read the following).
+
+## Add remote daemons
+
+sometime you want to make a simple load distribution.
+
+For this use case we will leverage an upcoming technology from docker, docker swarm. Docker swarm add the ability to use multihost containers (cluster of docker hosts). As it is an upcoming technology we must install it from source (and use docker with a version >= 1.4)
+
+```
+sudo apt-get install golang
+mkdir ~/gocode; export GOPATH=~/gocode.
+go get -u github.com/docker/swarm
+sudo cp ~/gocode/bin/swarm /usr/local/bin/swarm
+```
+
+***Note: This take a long time and must be repeated on each docker hosts.***
+
+Now swarm must access every single nodes that are parts of the cluster. You need to modify default start options and add the -H argument. Edit the /etc/default/docker file on each node add -H tcp://0.0.0.0:2375 to DOCKER_OPTS
+
+We will see later that we can define running strategy with docker. For example (and that's what we need) the hability to run containers on a specific host or group of host. For simplicity we will tag the docker hosts with a simple tag. This is done in the /etc/default/docker file. 
+
+- On node 10.10.0.5 add --label node=node1 to DOCKER_OPTS
+- On node 10.20.0.21 add --label node=node2 to DOCKER_OPTS
+
+Then restart docker on both nodes
+
+```
+sudo service docker restart
+```
+
+Now it's time to create the cluster. We use for this example a simple file discovery backend but it is possible to use consul, etcd or the hosted discovery service from docker. 
+
+```
+# from any docker host (or any host)
+echo "10.10.0.5:2375" > /tmp/cluster
+echo "10.20.0.21:2375" >> /tmp/cluster
+swarm manage --discovery file:///tmp/cluster -H 10.10.0.5:2376
+```
+
+Now docker client must use the swarm manager ip/port. This is really simple by exporting the DOCKER_HOST environment variable. 
+
+```
+export DOCKER_HOST=10.10.0.5:2376
+docker info
+Containers: 1
+Nodes: 2
+frofx-GA-78LMT-S2P: 10.20.0.21:2375
+n54l: 10.10.0.5:2375
+```
 
