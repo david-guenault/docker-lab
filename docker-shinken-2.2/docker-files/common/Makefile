@@ -1,4 +1,4 @@
-DOCKER=/usr/bin/docker
+DOCKER=/usr/bin/docker -H localhost:2375
 DOCKERENTER=/usr/bin/docker-enter
 IMAGE=$(REPO)/$(NAME):$(TAG)
 REPO=shinken
