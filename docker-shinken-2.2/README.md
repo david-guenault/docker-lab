@@ -11,6 +11,8 @@ You can find documentation about how to install docker at the following location
   - Redhat : https://docs.docker.com/installation/rhel/
   - Centos : https://docs.docker.com/installation/centos/
 
+NOTE: it is better to use lxc-docker with the latest version if you want to test swarm (lxc-docker-1.4.1)
+
 ### Fig
 
 Every gnu/linux flavor should work the same way. Fig is a python application and can be installed the following way (as root user): 
@@ -143,7 +145,7 @@ PING C1 (10.0.8.17): 56 data bytes
 64 bytes from 10.0.8.17: seq=3 ttl=64 time=0.099 ms
 ```
 
-And it just work !
+And it just work ! Wait, how does this magic happened ? In fact there is no magic here. Remember the mounted /etc/hosts file ? docker just append an entry to the /etc/hosts file of the container where we defined the link argument. 
 
 Ok now we have to establish links between each shinken container. First we have to now which daemons talk to others. In the default setup here is the answer :
 
@@ -360,7 +362,7 @@ sudo cp ~/gocode/bin/swarm /usr/local/bin/swarm
 
 Now swarm must access every single nodes that are parts of the cluster. You need to modify default start options and add the -H argument. Edit the /etc/default/docker file on each node add -H tcp://0.0.0.0:2375 to DOCKER_OPTS
 
-We will see later that we can define running strategy with docker. For example (and that's what we need) the hability to run containers on a specific host or group of host. For simplicity we will tag the docker hosts with a simple tag. This is done in the /etc/default/docker file. 
+We will see later that we can define running strategy with docker. For example (and that's what we need) the hability to run containers on a specific host. For simplicity we will tag the docker hosts with a simple tag. This is done in the /etc/default/docker file. 
 
 - On node 10.10.0.5 add --label node=node1 to DOCKER_OPTS
 - On node 10.20.0.21 add --label node=node2 to DOCKER_OPTS
@@ -374,7 +376,7 @@ sudo service docker restart
 Now it's time to create the cluster. We use for this example a simple file discovery backend but it is possible to use consul, etcd or the hosted discovery service from docker. 
 
 ```
-# from any docker host (or any host)
+# from any docker host (or any host with docker client)
 echo "10.10.0.5:2375" > /tmp/cluster
 echo "10.20.0.21:2375" >> /tmp/cluster
 swarm manage --discovery file:///tmp/cluster -H 10.10.0.5:2376

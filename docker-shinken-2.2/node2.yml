@@ -1,0 +1,10 @@
+poller2:
+    image: shinken/shinken:2.2
+    hostname: poller2
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+    command: /usr/bin/shinken-poller -c /etc/shinken/daemons/pollerd.ini
+    ports:
+        - "7771:7771"
+    environment:
+        - constraint:storage=node2

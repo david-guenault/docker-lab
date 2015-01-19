@@ -42,4 +42,19 @@ conf:
 	$(DOCKER) cp $(ID):/etc/shinken ./config/
 	docker rm $(ID)
 
+###### SWARM ALPHA #######
+
+clustercreate:
+	> cluster
+	for NODE in $(NODES); \
+	do \
+		echo $$NODE >> cluster; \
+	done;
+
+swarmstart:
+	nohup swarm manage --discovery file://cluster -H 0.0.0.0:2376 2>&1 &
+
+swarmstop:
+	killall swarm
+
 .PHONY: clean build kill rm rebuild start stop enter conf
