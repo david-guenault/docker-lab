@@ -3,7 +3,7 @@ REPO=shinken
 NAME=shinken
 PROJECT=dockershinken22
 FIG=/usr/local/bin/fig
-DOCKER=/usr/bin/docker
+DOCKER=/usr/bin/docker -H localhost:2375
 DOCKERENTER=/usr/local/bin/docker-enter
 IMAGE=$(REPO)/$(NAME):$(TAG)
 ID=shinken22getconf
@@ -42,6 +42,7 @@ conf:
 	$(DOCKER) cp $(ID):/etc/shinken ./config/
 	docker rm $(ID)
 
+<<<<<<< HEAD
 ###### SWARM ALPHA #######
 
 clustercreate:
@@ -58,3 +59,6 @@ swarmstop:
 	killall swarm
 
 .PHONY: clean build kill rm rebuild start stop enter conf
+=======
+.PHONY: clean build kill rm rebuild start stop enter conf
+>>>>>>> 4ea89a29a725ceba4e85e83056e644b51685e3e2
