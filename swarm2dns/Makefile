@@ -141,6 +141,17 @@ removenode:
 ######################################
 images: etcdimage swarmimage
 
+skydnsimage:
+	# build and pusg skydns image to docker hub
+	- @$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) rmi $(SKYDNSIMAGE)
+	$(SUDO) rm -Rf /tmp/skydns && \
+	cd /tmp && \
+	$(GIT) clone https://github.com/skynetservices/skydns && \
+	cd skydns && \
+	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) build -t $(SKYDNSIMAGE) . 
+	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) login
+	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) push $(SKYDNSIMAGE)
+
 swarmimage:
 	# build and push swarmimage to docker hub
 	- @$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) rmi $(SWARMIMAGE)
