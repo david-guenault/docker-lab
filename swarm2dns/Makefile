@@ -185,5 +185,5 @@ etcddeploy:
 
 deploy: swarmdeploy etcddeploy
 
-.PHONY: swarmstart swarmstop ps swarmstartlocal swarmstoplocal swarmstartremote swarmstopremote deployimages
+.PHONY: bootstart bootstop startmanager stopmanager addnode removenode images swarmimage swarmdeploy etcdimage cleanimages etcddeploy
 
