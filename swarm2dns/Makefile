@@ -30,6 +30,10 @@ ETCDIMAGENAME=etcd
 ETCDTAG=0.4.6
 ETCDIMAGE=$(REPOSITORY)/$(ETCDIMAGENAME):$(ETCDTAG)
 ETCDHEARTHBEAT=10
+# SKYDNS
+SKYDNSIMAGENAME=skydns
+SKYDNSTAG=latest
+SKYDNSIMAGE=$(REPOSITORY)/$(SKYDNSIMAGENAME):$(SKYDNSTAG)
 
 bootstart:
 	# start a local etcd node that will act as the first master
@@ -139,14 +143,14 @@ images: etcdimage swarmimage
 
 swarmimage:
 	# build and push swarmimage to docker hub
-	- @$(DOCKER) rmi $(SWARMIMAGE)
+	- @$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) rmi $(SWARMIMAGE)
 	$(SUDO) rm -Rf /tmp/swarm && \
 	cd /tmp && \
 	$(GIT) clone https://github.com/docker/swarm && \
 	cd swarm && \
-	$(DOCKER) build -t $(SWARMIMAGE) . 
-	$(DOCKER) login
-	$(DOCKER) push $(SWARMIMAGE)
+	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) build -t $(SWARMIMAGE) . 
+	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) login
+	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) push $(SWARMIMAGE)
 
 swarmdeploy:
 	# deploy swarm image on all nodes
@@ -158,7 +162,7 @@ swarmdeploy:
 
 etcdimage:
 	# build and push etcd to docker hub
-	- @$(DOCKER) rmi $(ETCDIMAGE)
+	- @$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) rmi $(ETCDIMAGE)
 	- @$(SUDO) rm -Rf /tmp/etcd && \
 	cd /tmp && \
 	$(GIT) clone https://github.com/coreos/etcd && \
@@ -168,13 +172,6 @@ etcdimage:
 	$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) login && \
 	$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) push $(ETCDIMAGE)
 
-cleanimages:
-	-@for NODE in $(NODES); \
-	do \
-		echo "remove $(SWARMIMAGE) and $(ETCDIMAGE) on node $$NODE"; \
-		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) rmi $(SWARMIMAGE) $(ETCDIMAGE); \
-	done;	
-
 etcddeploy:
 	# deploy etcd image on all nodes
 	-@for NODE in $(NODES); \
@@ -183,7 +180,17 @@ etcddeploy:
 		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) pull $(ETCDIMAGE); \
 	done;
 
+cleanimages:
+	-@for NODE in $(NODES); \
+	do \
+		echo "remove $(SWARMIMAGE) and $(ETCDIMAGE) on node $$NODE"; \
+		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) rmi $(SWARMIMAGE) $(ETCDIMAGE); \
+	done;	
+
+
 deploy: swarmdeploy etcddeploy
+
+# swarm2dns 
 
 .PHONY: bootstart bootstop startmanager stopmanager addnode removenode images swarmimage swarmdeploy etcdimage cleanimages etcddeploy
 
