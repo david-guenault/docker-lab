@@ -1,6 +1,9 @@
 ######################################
 # MODIFY WHAT YOU NEED HERE
 ######################################
+# The domain Name to be used
+DOMAIN=dock2dns.lan
+DNSFORWARD=8.8.8.8:53
 # REMOTE NODES HOSTS
 NODES=10.10.0.5 10.10.0.22
 # ETCD HOSTS / PORTS
@@ -19,6 +22,7 @@ DOCKER=/usr/bin/docker
 COMPOSE=/usr/local/bin/docker-compose
 GIT=/usr/bin/git
 SUDO=/usr/bin/sudo
+CAT=/bin/cat
 # DOCKER HUB REPO
 REPOSITORY=dguenault
 # SWARM
@@ -35,6 +39,9 @@ SKYDNSIMAGENAME=skydns
 SKYDNSTAG=latest
 SKYDNSIMAGE=$(REPOSITORY)/$(SKYDNSIMAGENAME):$(SKYDNSTAG)
 
+help:
+	$(CAT) README.md
+
 bootstart:
 	# start a local etcd node that will act as the first master
 	-@$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) run -d \
@@ -49,6 +56,17 @@ bootstart:
 	--name $(SWARMIMAGENAME)-AGENT-$(LOCALDOCKERHOST) \
 	$(SWARMIMAGE) \
 	join etcd://$(LOCALETCDHOST):$(ETCDPORTCLI)/v2/keys/swarm --addr $(LOCALDOCKERHOST):$(DOCKERPORT) --hb $(ETCDHEARTHBEAT) 
+	
+	# start a skydns instance with the local etcd backend
+	$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) run -d \
+	--name $(SKYDNSIMAGENAME)-$(LOCALDOCKERHOST) \
+	-p $(LOCALDOCKERHOST):53:53/udp \
+	$(SKYDNSIMAGE) \
+	-addr=0.0.0.0:53  \
+	-domain=$(DOMAIN) \
+	-logtostderr \
+	-machines=http://$(LOCALETCDHOST):$(ETCDPORTCLI) \
+	-nameservers=$(DNSFORWARD) 
 	
 	# start the cluster on all etcd nodes
 	PEERSANN=""; \
@@ -74,12 +92,28 @@ bootstart:
 		--name $(SWARMIMAGENAME)-AGENT-$$NODE \
 		$(SWARMIMAGE) \
 		join etcd://$$NODE:$(ETCDPORTCLI)/v2/keys/swarm --addr $$NODE:$(DOCKERPORT) --hb $(ETCDHEARTHBEAT) ; \
+	done; \
+	for NODE in $(NODES); \
+	do \
+		echo "Starting skydns on node $$NODE"; \
+		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) run -d \
+		--name $(SKYDNSIMAGENAME)-$$NODE \
+		-p $$NODE:53:53/udp \
+		$(SKYDNSIMAGE) \
+		-addr=0.0.0.0:53  \
+		-domain=$(DOMAIN) \
+		-logtostderr \
+		-machines=http://$$NODE:$(ETCDPORTCLI) \
+		-nameservers=$(DNSFORWARD) ; \
 	done;
 
 bootstop:
 	# stop and clean remote etcd/swarmjoin/swarmmanage
 	-@for NODE in $(NODES); \
 	do \
+		echo "Stop skydns on node $$NODE"; \
+		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) stop $(SKYDNSIMAGENAME)-$$NODE; \
+		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) rm $(SKYDNSIMAGENAME)-$$NODE; \
 		echo "Stop etcd on node $$NODE"; \
 		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) stop $(ETCDIMAGENAME)-$$NODE; \
 		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) rm $(ETCDIMAGENAME)-$$NODE; \
@@ -89,7 +123,7 @@ bootstop:
 	done;
 
 	# stop local 
-	-@for C in $(SWARMIMAGENAME)-AGENT-$(LOCALDOCKERHOST) $(ETCDIMAGENAME)-$(LOCALETCDHOST); \
+	-@for C in $(SWARMIMAGENAME)-AGENT-$(LOCALDOCKERHOST) $(ETCDIMAGENAME)-$(LOCALETCDHOST) $(SKYDNSIMAGENAME)-$(LOCALDOCKERHOST); \
 	do \
 		$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) kill $$C; \
 		$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) rm $$C; \
@@ -136,10 +170,16 @@ removenode:
 	$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) stop $(ETCDIMAGENAME)-$(NODE); 
 	$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) rm $(ETCDIMAGENAME)-$(NODE); 
 
+displaynodes:
+	echo "List nodes"
+	$(DOCKER) -H tcp://$(NODE):$(SWARMPORT) info
+
 ######################################
 # HERE ARE IMAGES PREREQUISITES DEPLOYMENT
 ######################################
-images: etcdimage swarmimage
+images: etcdimage swarmimage skydnsimage
+
+deploy: etcddeploy swarmdeploy skydnsdeploy
 
 skydnsimage:
 	# build and pusg skydns image to docker hub
@@ -151,6 +191,14 @@ skydnsimage:
 	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) build -t $(SKYDNSIMAGE) . 
 	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) login
 	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) push $(SKYDNSIMAGE)
+
+skydnsdeploy:
+	# deploy skydns image on all nodes
+	-@for NODE in $(NODES); \
+	do \
+		echo "Deploy $(SKYDNSIMAGE) on node $$NODE"; \
+		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) pull $(SKYDNSIMAGE); \
+	done;
 
 swarmimage:
 	# build and push swarmimage to docker hub
@@ -194,8 +242,8 @@ etcddeploy:
 cleanimages:
 	-@for NODE in $(NODES); \
 	do \
-		echo "remove $(SWARMIMAGE) and $(ETCDIMAGE) on node $$NODE"; \
-		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) rmi $(SWARMIMAGE) $(ETCDIMAGE); \
+		echo "remove $(SWARMIMAGE), $(SKYDNSIMAGE) and $(ETCDIMAGE) on node $$NODE"; \
+		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) rmi $(SWARMIMAGE) $(ETCDIMAGE) $(SKYDNSIMAGE); \
 	done;	
 
 
