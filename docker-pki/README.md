@@ -4,6 +4,17 @@ Most of the following was issued from docker online documentation (https://docs.
 
 # Create the CA
 
+First of all Edit the Makefile and modify the following to match YOUR organization
+
+```
+COUNTRY=FR
+STATE=Languedoc Roussillon
+LOCALITY=Perpignan
+ORGANIZATION=BOX4PROD
+```
+
+Create the CA
+
 ```
 make ca
 ```
@@ -25,52 +36,6 @@ make client CLIENT=[your certificate name]
 ```
 
 you can create as many client certificate as you want with the name you want
-
-# example
-
-I have 3 docker hosts with the legacy configuration (node1,node2,node3). node1 is the hostname. I do not have a dns server so every host get the nearly same /etc/hosts file
-
-- node1 /etc/hosts file
-
-```
-127.0.0.1   localhost
-127.0.1.1   node1   
-10.10.0.5   node1
-10.10.0.22  node2
-10.20.0.21  node3   
-```
-
-- node2 /etc/hosts file
-
-```
-127.0.0.1   localhost
-127.0.1.1   node2 
-10.10.0.5   node1
-10.10.0.22  node2
-10.20.0.21  node3   
-```
-
-- node3 /etc/hosts file
-
-```
-127.0.0.1   localhost
-127.0.1.1   node3
-10.10.0.5   node1
-10.10.0.22  node2
-10.20.0.21  node3   
-```
-
-- Create the required certificates
-
-```
-make ca
-make server SERVER=node1
-make server SERVER=node2
-make server SERVER=node3
-make client CLIENT=clinode1
-make client CLIENT=clinode2
-make client CLIENT=clinode3
-```
 
 # Deploy certificates
 
@@ -118,5 +83,41 @@ sudo /path/to/certificates/folder/setup.sh
 
 Job done ! 
 
+## Deploy on clients
 
+To be done .... :-)
+
+# Full example
+
+I have 3 docker hosts with the legacy configuration (node1,node2,node3). Each of the host is configured in DNS or at least have a configured /etc/hosts file allowing to resolve by name the others hosts. 
+
+
+- Create the required certificates. For this example i issue the commands from node1 but this should be executed from your laptop for example. 
+
+```
+make ca
+make server SERVER=node1
+make server SERVER=node2
+make server SERVER=node3
+make client CLIENT=clinode1
+make client CLIENT=clinode2
+make client CLIENT=clinode3
+```
+
+Now deploy the server folders to their respective host and issue the following command as root (or sudo)
+
+```
+scp server/node2 frogx@node2:/home/frogx/
+ssh frogx@node2 
+sudo ./node2/setup.sh
+rm -Rf node2
+```
+Then deploy the client folders to their respective hosts and issue the following command as the user that will use the client
+
+```
+scp client/node2 frogx@node2:/home/frogx/
+ssh frogx@node2 
+sudo ./node2/setup.sh
+rm -Rf node2
+```
 
