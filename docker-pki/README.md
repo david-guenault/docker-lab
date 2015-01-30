@@ -99,14 +99,15 @@ make ca
 make server SERVER=node1
 make server SERVER=node2
 make server SERVER=node3
-make client CLIENT=clinode1
-make client CLIENT=clinode2
-make client CLIENT=clinode3
+make client CLIENT=node1
+make client CLIENT=node2
+make client CLIENT=node3
 ```
 
-Now deploy the server folders to their respective host and issue the following command as root (or sudo)
+Now deploy the server folders to their respective hosts and issue the following command as root (or sudo)
 
 ```
+# example for node2 from node1
 scp server/node2 frogx@node2:/home/frogx/
 ssh frogx@node2 
 sudo ./node2/setup.sh
@@ -115,9 +116,37 @@ rm -Rf node2
 Then deploy the client folders to their respective hosts and issue the following command as the user that will use the client
 
 ```
+# example for node2 from node1
 scp client/node2 frogx@node2:/home/frogx/
 ssh frogx@node2 
 sudo ./node2/setup.sh
 rm -Rf node2
 ```
 
+Finally do some tests
+
+```
+# version of the local docker
+$ docker version
+Client version: 1.4.1
+Client API version: 1.16
+Go version (client): go1.3.3
+Git commit (client): 5bc2ff8
+OS/Arch (client): linux/amd64
+Server version: 1.4.1
+Server API version: 1.16
+Go version (server): go1.3.3
+Git commit (server): 5bc2ff8
+
+# version of a remote docker
+$ docker -H tcp://node2:2375 version
+Client version: 1.4.1
+Client API version: 1.16
+Go version (client): go1.3.3
+Git commit (client): 5bc2ff8
+OS/Arch (client): linux/amd64
+Server version: 1.4.1
+Server API version: 1.16
+Go version (server): go1.3.3
+Git commit (server): 5bc2ff8
+```
