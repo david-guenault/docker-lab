@@ -1,0 +1,7 @@
+#!/bin/bash
+BASE=$(dirname $(readlink -f $0))
+mkdir -p /etc/pki/docker
+cp $BASE/*.pem /etc/pki/docker
+sed -i /^DOCKER_OPTS/d /etc/default/docker
+echo "DOCKER_OPTS=\"-H tcp://0.0.0.0:@PORT@ --tlsverify --tlscacert=/etc/pki/docker/ca.pem --tlscert=/etc/pki/docker/server-cert.pem --tlskey=/etc/pki/docker/server-key.pem --label storage=@SERVER@\"" >> /etc/default/docker
+service docker restart
