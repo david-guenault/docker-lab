@@ -1,0 +1,11 @@
+#!/bin/bash
+BASE=$(dirname $(readlink -f $0))
+mkdir -p ~/.docker
+cp -v $BASE/*.pem ~/.docker
+sed -i "/^DOCKER_/d" ~/.bashrc
+echo "export DOCKER_TLS_VERIFY=1" >> ~/.bashrc
+echo "export DOCKER_HOST=tcp://@SERVER@:@PORT@" >> ~/.bashrc
+echo "#####################################################################################"
+echo "To make the configuration available issue the following command" 
+echo "source ~/.bashrc"
+echo "#####################################################################################"
