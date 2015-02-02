@@ -1,0 +1,33 @@
+[req]
+distinguished_name = req_distinguished_name
+req_extensions = daemon
+ 
+[req_distinguished_name]
+countryName_default = @COUNTRY@
+stateOrProvinceName_default = @STATE@
+localityName_default = @LOCALITY@
+organizationName_default = @ORGANIZATION@
+commonName_default = @CN@
+countryName = Country Name (2 letter code)
+stateOrProvinceName = State or Province Name (full name)
+localityName = Locality Name (eg, city)
+organizationName_default = @ORGANIZATION@
+commonName = Internet Widgits Ltd
+commonName_max  = 64
+ 
+[ client ]
+basicConstraints = CA:FALSE
+extendedKeyUsage = clientAuth
+subjectAltName = @alt_names
+ 
+[ daemon ]
+basicConstraints = CA:FALSE
+extendedKeyUsage = serverAuth
+subjectAltName = @alt_names
+
+[ swarm ]
+basicConstraints = CA:FALSE
+extendedKeyUsage = clientAuth,serverAuth
+subjectAltName = @alt_names
+
+[alt_names]
