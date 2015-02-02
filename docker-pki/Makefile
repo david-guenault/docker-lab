@@ -83,6 +83,9 @@ testserver:
 
 testclient:
 	$(DOCKER) -H tcp://$(HOST):$(DOCKERPORT) --tlsverify --tlscacert=CA/ca.pem --tlscert=CA/certs/client-$(HOST)/cert.pem --tlskey=CA/certs/client-$(HOST)/key.pem version
+
+testswarm:
+	$(SWARM) manage $(HOST):2375 --tlsverify --tlscacert=CA/ca.pem --tlscert=CA/certs/swarm-$(HOST)/cert.pem --tlskey=CA/certs/swarm-$(HOST)/key.pem -H 0.0.0.0:2376
 	
 reset:
 	@-service docker stop
