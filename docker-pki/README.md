@@ -11,7 +11,6 @@ A realy big thx to Jessica B. Hamrick https://github.com/jhamrick who pointed my
 First of all Edit the Makefile and modify the following to match YOUR organization
 
 ```
-CAPATH=$$(pwd)/CA
 COUNTRY=FR
 STATE=Languedoc Roussillon
 LOCALITY=Perpignan

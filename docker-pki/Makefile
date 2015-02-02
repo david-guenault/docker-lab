@@ -1,5 +1,4 @@
 # certs data
-CAPATH=$$(pwd)/CA
 COUNTRY=FR
 STATE=Languedoc Roussillon
 LOCALITY=Perpignan
