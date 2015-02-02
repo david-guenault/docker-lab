@@ -50,4 +50,49 @@ you can create as many swarm certificate as you want with the name you want
 
 # Deploy certificates
 
+## daemon certificates
+
+- Create a place to store your certificates and deploy them on each nodes
+
+```
+mkdir -p /etc/pki/docker
+cp CA/daemon-[YOURHOSTNAME]/*.pem /etc/pki/docker
+cp CA/ca.pem /etc/pki/docker
+chmod -R 600  /etc/pki/docker/*.pem
+```
+
+- Edit /etc/default/docker so DOCKER_OPTS will match the following
+
+```
+DOCKER_OPTS="-H tcp://0.0.0.0:2375 --tlsverify --tlscacert=/etc/pki/docker/ca.pem --tlscert=/etc/pki/docker/cert.pem --tlskey=/etc/pki/docker/key.pem --label storage=node1"
+```
+
+- Restart your docker daemon
+
+```
+sudo service docker restart
+```
+
+## client certificates
+
+- copy your client certificates to ~/.docker/
+
+```
+cp CA/certs/client-[your client name]/*.pem ~/.docker/
+cp CA/ca.pm ~/.docker
+```
+- Add the following to your ~/.bashrc file
+
+```
+DOCKER_HOST=tcp://[your hostname]:2375
+DOCKER_TLS_VERIFY=1
+```
+- reload your ~/.bashrc file
+
+```
+source ~/.bashrc
+```
+
+## swarm certificates
+
 [TO BE DONE]
