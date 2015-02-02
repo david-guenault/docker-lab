@@ -56,7 +56,7 @@ you can create as many swarm certificate as you want with the name you want
 
 ```
 mkdir -p /etc/pki/docker
-cp CA/daemon-[YOURHOSTNAME]/*.pem /etc/pki/docker
+cp CA/certs/daemon-[YOURHOSTNAME]/*.pem /etc/pki/docker
 cp CA/ca.pem /etc/pki/docker
 chmod -R 600  /etc/pki/docker/*.pem
 ```
