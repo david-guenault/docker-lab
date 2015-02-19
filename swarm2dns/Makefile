@@ -4,16 +4,24 @@
 # The domain Name to be used
 DOMAIN=dock2dns.lan
 DNSFORWARD=8.8.8.8:53
-# REMOTE NODES HOSTS
-NODES=10.10.0.5 10.10.0.22
-# ETCD HOSTS / PORTS
-LOCALETCDHOST=10.20.0.21
-ETCDPORTANN=7001
-ETCDPORTCLI=4001
+# DOCKER NODES
+LOCAL=node1
+NODES=node2 node3
 # DOCKER HOSTS / PORTS
-LOCALDOCKERHOST=10.20.0.21
+LOCALDOCKERHOST=$(LOCAL)
 DOCKERPORT=2375
 SWARMPORT=2376
+# REMOTE NODES HOSTS
+MANAGERSNODES=$(LOCAL) $(NODES)
+CONSULNODES=$(LOCAL) $(NODES)
+CONSULHTTPPORT=8500
+# CERTIFICATES PATH
+SWARMCERTS=/etc/pki/swarm
+DOCKERCERTS=/etc/pki/docker
+CLIENTCERTS=~/.docker
+# DOCKER OPTIONS
+DOCKERDAEMONIZE= -ti --rm 
+DOCKER0=172.17.42.1
 ######################################
 # DO NOT MODIFY UNLESS YOU KNOW WHAT YOU ARE DOING !
 ######################################
@@ -27,229 +35,207 @@ CAT=/bin/cat
 REPOSITORY=dguenault
 # SWARM
 SWARMIMAGENAME=swarm
-SWARMTAG=latest
+SWARMREPO=docker
+SWARMTAG=test
 SWARMIMAGE=$(REPOSITORY)/$(SWARMIMAGENAME):$(SWARMTAG)
-# ETCD
-ETCDIMAGENAME=etcd
-ETCDTAG=0.4.6
-ETCDIMAGE=$(REPOSITORY)/$(ETCDIMAGENAME):$(ETCDTAG)
-ETCDHEARTHBEAT=10
-# SKYDNS
-SKYDNSIMAGENAME=skydns
-SKYDNSTAG=latest
-SKYDNSIMAGE=$(REPOSITORY)/$(SKYDNSIMAGENAME):$(SKYDNSTAG)
+# MANAGERTLS=--tlsverify --tlscacert $(SWARMCERTS)/ca.pem --tlscert $(SWARMCERTS)/cert.pem --tlskey $(SWARMCERTS)/key.pem
+# MANAGERTLSVOLUME= -v $(SWARMCERTS):/tlscerts
+# CONSUL
+CONSULDC=box4prod
+CONSULIMAGENAME=consul
+CONSULTAG=0.4.1
+CONSULIMAGE=$(REPOSITORY)/$(CONSULIMAGENAME):$(CONSULTAG)
 
 help:
-	$(CAT) README.md
+	@-echo "TODO !"
 
-bootstart:
-	# start a local etcd node that will act as the first master
-	-@$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) run -d \
-	-p $(ETCDPORTANN):$(ETCDPORTANN) \
-	-p $(ETCDPORTCLI):$(ETCDPORTCLI) \
-	--name $(ETCDIMAGENAME)-$(LOCALETCDHOST) \
-	$(ETCDIMAGE) \
-	-peer-addr $(LOCALETCDHOST):$(ETCDPORTANN) -addr $(LOCALETCDHOST):$(ETCDPORTCLI) -data-dir machines/$(ETCDIMAGENAME)-$(LOCALETCDHOST) -name $(ETCDIMAGENAME)-$(LOCALETCDHOST)
+##########################################################
+# GLOBAL 
+##########################################################
 
-	# make swarm join with etcd discovery backend
-	-@$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) run -d \
-	--name $(SWARMIMAGENAME)-AGENT-$(LOCALDOCKERHOST) \
-	$(SWARMIMAGE) \
-	join etcd://$(LOCALETCDHOST):$(ETCDPORTCLI)/v2/keys/swarm --addr $(LOCALDOCKERHOST):$(DOCKERPORT) --hb $(ETCDHEARTHBEAT) 
-	
-	# start a skydns instance with the local etcd backend
-	$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) run -d \
-	--name $(SKYDNSIMAGENAME)-$(LOCALDOCKERHOST) \
-	-p $(LOCALDOCKERHOST):53:53/udp \
-	$(SKYDNSIMAGE) \
-	-addr=0.0.0.0:53  \
-	-domain=$(DOMAIN) \
-	-logtostderr \
-	-machines=http://$(LOCALETCDHOST):$(ETCDPORTCLI) \
-	-nameservers=$(DNSFORWARD) 
-	
-	# start the cluster on all etcd nodes
-	PEERSANN=""; \
-	for NODE in $(NODES); \
+bootstart: startconsul registernodes startmanager
+
+bootstop: stopmanager stopconsul 
+
+##########################################################
+# CONSUL
+##########################################################
+
+startconsul:
+	@-IP=$$(ping -c 1 $(LOCAL) | head -n 1 | awk '{print $$3}' | sed -e "s/(//g" -e "s/)//g"); \
+	ALLNODES=" $(LOCAL) $(NODES)"; \
+	NODECOUNT=$$(echo $$ALLNODES | wc -w); \
+	for NODE in $$ALLNODES; \
 	do \
-		PEERSANN="$$PEERSANN,$$NODE:$(ETCDPORTCLI)"; \
-	done; \
-	PEERSANN=$(LOCALETCDHOST):$(ETCDPORTANN)$$PEERSANN; \
-	for NODE in $(NODES); \
-	do \
-		echo "Starting etcd on node $$NODE"; \
+		NODEIP=$$(ping -c 1 $$NODE | head -n 1 | awk '{print $$3}' | sed -e "s/(//g" -e "s/)//g"); \
 		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) run -d \
-		-p $(ETCDPORTANN):$(ETCDPORTANN) \
-		-p $(ETCDPORTCLI):$(ETCDPORTCLI) \
-		--name $(ETCDIMAGENAME)-$$NODE \
-		$(ETCDIMAGE) \
-		-peer-addr $$NODE:$(ETCDPORTANN) -addr $$NODE:$(ETCDPORTCLI) --peers $$PEERSANN -data-dir machines/$(ETCDIMAGENAME)-$$NODE -name $(ETCDIMAGENAME)-$$NODE; \
-	done; \
-	for NODE in $(NODES); \
+			--name consul-$$NODE \
+			--hostname consul-$$NODE \
+			-p 8300:8300 \
+			-p 8301:8301/udp \
+			-p 8301:8301 \
+			-p 8302:8302/udp \
+			 -p 8302:8302 \
+			 -p 8400:8400 \
+			 -p 8500:8500 \
+			 -p $(DOCKER0):53:8600/udp \
+			 $(CONSULIMAGE) \
+			 	agent \
+			 	-server -data-dir /tmp/consul \
+				-config-file /tmp/consul.cfg  \
+			 	-node consul-$$NODE  \
+			 	-bootstrap-expect $$NODECOUNT  \
+			 	-bind 0.0.0.0  \
+			 	-dc $(CONSULDC)  \
+			 	-client 0.0.0.0 \
+			 	-advertise $$NODEIP \
+			 	-retry-join $$IP \
+			 	-retry-interval 5s; \
+		sleep 3; \
+	done;
+
+stopconsul:
+	@-ALLNODES="$(NODES) $(LOCAL)"; \
+	for NODE in $$ALLNODES; \
 	do \
+		echo "Stop consul on node $$NODE"; \
+		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) stop $(CONSULIMAGENAME)-$$NODE; \
+		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) rm $(CONSULIMAGENAME)-$$NODE; \
+	done;
+
+stopconsulnode:
+	echo "Stop consul on node $$NODE"; \
+	$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) stop $(CONSULIMAGENAME)-$$NODE; \
+
+startconsulnode:
+	echo "Start consul on node $$NODE"; \
+	$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) start $(CONSULIMAGENAME)-$$NODE; \
+
+createconsulnode:
+	echo "Create consul node consul-$(NAME) on node $(NODE)"; \
+	@-IP=$$(ping -c 1 $(NODE) | head -n 1 | awk '{print $$3}' | sed -e "s/(//g" -e "s/)//g"); \
+	ALLNODES=" $(LOCAL) $(NODES)"; \
+	NODECOUNT=$$(echo $$ALLNODES | wc -w); \
+	$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) run -d \
+		--name consul-$(NODE) \
+		--hostname consul-$(NAME) \
+		-p 8300:8300 \
+		-p 8301:8301/udp \
+		-p 8301:8301 \
+		-p 8302:8302/udp \
+		 -p 8302:8302 \
+		 -p 8400:8400 \
+		 -p 8500:8500 \
+		 -p $(DOCKER0):53:8600/udp \
+		 $(CONSULIMAGE) \
+		 	agent \
+		 	-server -data-dir /tmp/consul \
+			-config-file /tmp/consul.cfg  \
+		 	-node consul-$(NAME)  \
+		 	-bootstrap-expect $$NODECOUNT  \
+		 	-bind 0.0.0.0  \
+		 	-dc $(CONSULDC)  \
+		 	-client 0.0.0.0 \
+		 	-advertise $$NODEIP \
+		 	-retry-join $$IP \
+		 	-retry-interval 5s; \
+
+
+##########################################################
+# SWARM NODE REGISTER
+##########################################################
+
+registernodes:
+	PEERSCLI=""; \
+	LOCALIP=$$(ping -c 1 $(LOCAL) | head -n 1 | awk '{print $$3}' | sed -e "s/(//g" -e "s/)//g"); \
+	ALLNODES="$(LOCAL) $(NODES)"; \
+	for NODE in $$ALLNODES; \
+	do \
+		IP=$$(ping -c 1 $$NODE | head -n 1 | awk '{print $$3}' | sed -e "s/(//g" -e "s/)//g"); \
+		PEERSCLI="$$PEERSCLI,$$IP:$(CONSULHTTPPORT)"; \
+	done; \
+	PEERSCLI=$$(echo $$PEERSCLI | sed 's/^.//'); \
+	for NODE in $$ALLNODES; \
+	do \
+		IP=$$(ping -c 1 $$NODE | head -n 1 | awk '{print $$3}' | sed -e "s/(//g" -e "s/)//g"); \
 		echo "Starting swarm join on node $$NODE"; \
 		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) run -d \
 		--name $(SWARMIMAGENAME)-AGENT-$$NODE \
 		$(SWARMIMAGE) \
-		join etcd://$$NODE:$(ETCDPORTCLI)/v2/keys/swarm --addr $$NODE:$(DOCKERPORT) --hb $(ETCDHEARTHBEAT) ; \
-	done; \
-	for NODE in $(NODES); \
-	do \
-		echo "Starting skydns on node $$NODE"; \
-		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) run -d \
-		--name $(SKYDNSIMAGENAME)-$$NODE \
-		-p $$NODE:53:53/udp \
-		$(SKYDNSIMAGE) \
-		-addr=0.0.0.0:53  \
-		-domain=$(DOMAIN) \
-		-logtostderr \
-		-machines=http://$$NODE:$(ETCDPORTCLI) \
-		-nameservers=$(DNSFORWARD) ; \
-	done;
-
-bootstop:
-	# stop and clean remote etcd/swarmjoin/swarmmanage
-	-@for NODE in $(NODES); \
-	do \
-		echo "Stop skydns on node $$NODE"; \
-		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) stop $(SKYDNSIMAGENAME)-$$NODE; \
-		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) rm $(SKYDNSIMAGENAME)-$$NODE; \
-		echo "Stop etcd on node $$NODE"; \
-		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) stop $(ETCDIMAGENAME)-$$NODE; \
-		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) rm $(ETCDIMAGENAME)-$$NODE; \
-		echo "Stop swarm join on node $$NODE"; \
-		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) stop $(SWARMIMAGENAME)-AGENT-$$NODE; \
+		join consul://$$PEERSCLI/swarm --addr $$IP:$(DOCKERPORT); \
+		sleep 2; \
+		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) kill $(SWARMIMAGENAME)-AGENT-$$NODE; \
 		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) rm $(SWARMIMAGENAME)-AGENT-$$NODE; \
-	done;
+	done; 
 
-	# stop local 
-	-@for C in $(SWARMIMAGENAME)-AGENT-$(LOCALDOCKERHOST) $(ETCDIMAGENAME)-$(LOCALETCDHOST) $(SKYDNSIMAGENAME)-$(LOCALDOCKERHOST); \
-	do \
-		$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) kill $$C; \
-		$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) rm $$C; \
-	done;
 
 ######################################
-# ADD/REMOVE NODES AFTER BOOTSTRAPPING
+# SWARM MANAGER
 ######################################
 startmanager:
+	@-echo "Start manager on $(NODE)"; \
+	PEERSCLI=""; \
+	LOCALIP=$$(ping -c 1 $(LOCAL) | head -n 1 | awk '{print $$3}' | sed -e "s/(//g" -e "s/)//g"); \
+	ALLNODES="$(LOCAL) $(NODES)"; \
+	for NODE in $$ALLNODES; do \
+		IP=$$(ping -c 1 $$NODE | head -n 1 | awk '{print $$3}' | sed -e "s/(//g" -e "s/)//g"); \
+		PEERSCLI="$$PEERSCLI,$$IP:$(CONSULHTTPPORT)"; \
+	done;  \
+	PEERSCLI="$$LOCALIP:$(CONSULHTTPPORT)$$PEERSCLI"; \
 	$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) run -d \
-	--name $(SWARMIMAGENAME)-MANAGE-$(NODE) \
-	-p $(SWARMPORT):$(SWARMPORT) \
-	$(SWARMIMAGE) \
-	manage etcd://$(NODE):$(ETCDPORTCLI)/v2/keys/swarm --H 0.0.0.0:$(SWARMPORT) 
+		--name manager-$(NODE) \
+		-p $(SWARMPORT):$(SWARMPORT) $(MANAGERTLSVOLUME) \
+		$(SWARMIMAGE) \
+		manage consul://$$PEERSCLI/swarm $(MANAGERTLS)  -H 0.0.0.0:$(SWARMPORT) 
 
 stopmanager:
-	$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) stop $(SWARMIMAGENAME)-MANAGE-$(NODE)
-	$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) rm $(SWARMIMAGENAME)-MANAGE-$(NODE)
-
-addnode:
-	PEERSANN=""; \
-	for NODEPEERS in $(NODES); \
-	do \
-		PEERSANN="$$PEERSANN,$$NODEPEERS:$(ETCDPORTCLI)"; \
-	done; \
-	PEERSANN=$(LOCALETCDHOST):$(ETCDPORTANN)$$PEERSANN; \
-	echo "Starting etcd on node $(NODE)"; \
-	$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) run -d \
-	-p $(ETCDPORTANN):$(ETCDPORTANN) \
-	-p $(ETCDPORTCLI):$(ETCDPORTCLI) \
-	--name $(ETCDIMAGENAME)-$(NODE) \
-	$(ETCDIMAGE) \
-	-peer-addr $(NODE):$(ETCDPORTANN) -addr $(NODE):$(ETCDPORTCLI) --peers $$PEERSANN -data-dir machines/$(ETCDIMAGENAME)-$(NODE) -name $(ETCDIMAGENAME)-$(NODE); \
-	echo "Starting swarm join on node $(NODE)"; \
-	$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) run -d \
-	--name $(SWARMIMAGENAME)-AGENT-$(NODE) \
-	$(SWARMIMAGE) \
-	join etcd://$(NODE):$(ETCDPORTCLI)/v2/keys/swarm --addr $(NODE):$(DOCKERPORT) --hb $(ETCDHEARTHBEAT);
-
-removenode:
-	echo "Removing node $NODE from cluster"
-	$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) stop $(SWARMIMAGENAME)-AGENT-$(NODE); 
-	$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) rm $(SWARMIMAGENAME)-AGENT-$(NODE); 
-	$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) stop $(ETCDIMAGENAME)-$(NODE); 
-	$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) rm $(ETCDIMAGENAME)-$(NODE); 
-
-displaynodes:
-	echo "List nodes"
-	$(DOCKER) -H tcp://$(NODE):$(SWARMPORT) info
+	@-echo "Stop manager on $(NODE)"
+	@-$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) stop manager-$(NODE)
+	@-$(DOCKER) -H tcp://$(NODE):$(DOCKERPORT) rm manager-$(NODE)
 
 ######################################
 # HERE ARE IMAGES PREREQUISITES DEPLOYMENT
 ######################################
-images: etcdimage swarmimage skydnsimage
-
-deploy: etcddeploy swarmdeploy skydnsdeploy
-
-skydnsimage:
-	# build and pusg skydns image to docker hub
-	- @$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) rmi $(SKYDNSIMAGE)
-	$(SUDO) rm -Rf /tmp/skydns && \
-	cd /tmp && \
-	$(GIT) clone https://github.com/skynetservices/skydns && \
-	cd skydns && \
-	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) build -t $(SKYDNSIMAGE) . 
-	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) login
-	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) push $(SKYDNSIMAGE)
-
-skydnsdeploy:
-	# deploy skydns image on all nodes
-	-@for NODE in $(NODES); \
-	do \
-		echo "Deploy $(SKYDNSIMAGE) on node $$NODE"; \
-		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) pull $(SKYDNSIMAGE); \
-	done;
 
 swarmimage:
-	# build and push swarmimage to docker hub
-	- @$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) rmi $(SWARMIMAGE)
+	# build swarmimage 
 	$(SUDO) rm -Rf /tmp/swarm && \
 	cd /tmp && \
-	$(GIT) clone https://github.com/docker/swarm && \
+	$(GIT) clone https://github.com/$(SWARMREPO)/swarm && \
+	- @$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) rmi $(SWARMIMAGE)
 	cd swarm && \
+	if [ "$(SWARMTAG)" != "latest" ]; then $(GIT) checkout tags/$(SWARMTAG); fi && \
 	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) build -t $(SWARMIMAGE) . 
+
+swarmdevimage:
+	cd go/src/github.com/docker/swarm && \
+	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) build -t $(SWARMIMAGE) . 
+
+swarmpush:
 	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) login
 	$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) push $(SWARMIMAGE)
 
 swarmdeploy:
-	# deploy swarm image on all nodes
 	-@for NODE in $(NODES); \
 	do \
 		echo "Deploy $(SWARMIMAGE) on node $$NODE"; \
 		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) pull $(SWARMIMAGE); \
 	done;
 
-etcdimage:
-	# build and push etcd to docker hub
-	- @$(DOCKER) -H $(LOCALDOCKERHOST):$(DOCKERPORT) rmi $(ETCDIMAGE)
-	- @$(SUDO) rm -Rf /tmp/etcd && \
-	cd /tmp && \
-	$(GIT) clone https://github.com/coreos/etcd && \
-	cd etcd && \
-	$(GIT) checkout tags/v$(ETCDTAG) && \
-	$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) build -t $(ETCDIMAGE) . && \
-	$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) login && \
-	$(DOCKER) -H tcp://$(LOCALDOCKERHOST):$(DOCKERPORT) push $(ETCDIMAGE)
+consulimage:
+	cd ../dockerfiles/consul && \
+	$(DOCKER) -H tcp://$(LOCAL):$(DOCKERPORT) build -t $(CONSULIMAGE) .
 
-etcddeploy:
-	# deploy etcd image on all nodes
+consulpush:
+	$(DOCKER) -H tcp://$(LOCAL):$(DOCKERPORT) login
+	$(DOCKER) -H tcp://$(LOCAL):$(DOCKERPORT) push $(CONSULIMAGE)
+
+consuldeploy:
 	-@for NODE in $(NODES); \
 	do \
-		echo "Deploy $(ETCDIMAGE) on node $$NODE"; \
-		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) pull $(ETCDIMAGE); \
+		echo "Deploy $(CONSULIMAGE) on node $$NODE"; \
+		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) pull $(CONSULIMAGE); \
 	done;
 
-cleanimages:
-	-@for NODE in $(NODES); \
-	do \
-		echo "remove $(SWARMIMAGE), $(SKYDNSIMAGE) and $(ETCDIMAGE) on node $$NODE"; \
-		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) rmi $(SWARMIMAGE) $(ETCDIMAGE) $(SKYDNSIMAGE); \
-	done;	
-
-
-deploy: swarmdeploy etcddeploy
-
-# swarm2dns 
-
-.PHONY: bootstart bootstop startmanager stopmanager addnode removenode images swarmimage swarmdeploy etcdimage cleanimages etcddeploy
+.PHONY: 
 

@@ -7,17 +7,15 @@
 - Configure the following variables in the Makefile 
 
 ```
-# REMOTE NODES HOSTS
-NODES=10.10.0.5 10.10.0.22
-# ETCD HOSTS / PORTS
-LOCALETCDHOST=10.20.0.21
-ETCDPORTANN=7001
-ETCDPORTCLI=4001
-# DOCKER HOSTS / PORTS
-LOCALDOCKERHOST=10.20.0.21
-DOCKERPORT=2375
-SWARMPORT=2376
+# The domain Name to be used
+DOMAIN=dock2dns.lan
+DNSFORWARD=8.8.8.8:53
+# DOCKER NODES
+LOCAL=node1
+NODES=node2 node3
 ```
+
+**Note that you run the bootstrap from the node configured in LOCAL**
 
 - Build the required images (you need a docker hub account to push the images)
 
