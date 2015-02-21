@@ -1,2 +1,6 @@
 .nfs*
-CA/*
+ca/*
+certs/*
+crl/*
+etc/*
+bundles/*

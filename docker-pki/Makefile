@@ -1,119 +1,101 @@
-# certs data
-COUNTRY=FR
-STATE=Languedoc Roussillon
-LOCALITY=Perpignan
 ORGANIZATION=BOX4PROD
+DOMAIN=box4prod.com
 DAYS=3650
 SIZE=2048
-# certs default
-HOST=$$(hostname -s)
-TYPE=daemon
-# Docker
-DOCKERHOST=$(HOST)
-DOCKERPORT=2375
-# Binaries
-DOCKER=/usr/bin/docker
-SWARM=/usr/bin/swarm
 OPENSSL=/usr/bin/openssl
 
-ca:
-	mkdir -p CA && \
-	BASE=$$(readlink -f .) && \
-	IP=$$(ping -c 1 $(HOST) | head -n 1 | awk '{print $$3}' | sed -e "s/(//g" -e "s/)//g") && \
-	cp templates/openssl.cnf CA/ssl.cnf && \
-	cd CA && \
+caconfig:
+	mkdir -p etc
+	cp templates/root-ca.conf.template etc/root-ca.conf
+	cp templates/signing-ca.conf.template etc/signing-ca.conf
 	sed -i \
-		 -e "s/@COUNTRY@/$(COUNTRY)/g" \
-		 -e "s/@STATE@/$(STATE)/g" \
-		 -e "s/@LOCALITY@/$(LOCALITY)/g" \
-		 -e "s/@ORGANIZATION@/$(ORGANIZATION)/g"  \
-		 -e "s/@CN@/$(HOST)/g" \
-		 -e "s/@CAPATH@/CA/g" ssl.cnf && \
-	touch password && \
-	chmod 600 password && \
-	cat /dev/urandom | head -c 128 | base64 | sed -n '{p;p;}' >> password && \
-	$(OPENSSL) genrsa \
-		-des3 \
-		-passout file:password \
-		-out cakey.pem 2048 && \
+		-e "s/@DOMAIN@/$(DOMAIN)/g" \
+		-e "s/@ORGANIZATION@/$(ORGANIZATION)/g" \
+		-e "s/@SIZE@/$(SIZE)/g" \
+		-e "s/@DAYS@/$(DAYS)/g" \
+		etc/root-ca.conf
+	sed -i \
+		-e "s/@DOMAIN@/$(DOMAIN)/g" \
+		-e "s/@ORGANIZATION@/$(ORGANIZATION)/g" \
+		-e "s/@SIZE@/$(SIZE)/g" \
+		-e "s/@DAYS@/$(DAYS)/g" \
+		etc/signing-ca.conf
+
+serverconfig:
+	cp templates/server.conf.template etc/$(HOST).conf
+	sed -i \
+		-e "s/@DOMAIN@/$(DOMAIN)/g" \
+		-e "s/@ORGANIZATION@/$(ORGANIZATION)/g" \
+		-e "s/@SIZE@/$(SIZE)/g" \
+		-e "s/@CN@/$(HOST)/g" \
+		etc/$(HOST).conf
+
+ca: caconfig
+	mkdir -p ca/root-ca/private ca/root-ca/db crl certs && \
+	chmod 700 ca/root-ca/private && \
+	cp /dev/null ca/root-ca/db/root-ca.db && \
+	cp /dev/null ca/root-ca/db/root-ca.db.attr && \
+	echo 01 > ca/root-ca/db/root-ca.crt.srl && \
+	echo 01 > ca/root-ca/db/root-ca.crl.srl && \
+	$(OPENSSL) req -new \
+    		-config etc/root-ca.conf \
+    		-out ca/root-ca.csr \
+    		-keyout ca/root-ca/private/root-ca.key \
+    		-nodes \
+    		-batch && \
+	$(OPENSSL) ca -selfsign \
+    		-config etc/root-ca.conf \
+    		-in ca/root-ca.csr \
+    		-out ca/root-ca.crt \
+    		-batch \
+    		-extensions root_ca_ext && \
+	mkdir -p ca/signing-ca/private ca/signing-ca/db crl certs && \
+	chmod 700 ca/signing-ca/private && \
+	cp /dev/null ca/signing-ca/db/signing-ca.db && \
+	cp /dev/null ca/signing-ca/db/signing-ca.db.attr && \
+	echo 01 > ca/signing-ca/db/signing-ca.crt.srl && \
+	echo 01 > ca/signing-ca/db/signing-ca.crl.srl && \
+	$(OPENSSL) req -new \
+    		-config etc/signing-ca.conf \
+    		-out ca/signing-ca.csr \
+    		-nodes \
+    		-batch \
+    		-keyout ca/signing-ca/private/signing-ca.key && \
+	$(OPENSSL) ca \
+		-config etc/root-ca.conf \
+    		-in ca/signing-ca.csr \
+    		-out ca/signing-ca.crt \
+    		-extensions signing_ca_ext \
+    		-batch
+crl:
+	$(OPENSSL) ca -gencrl \
+    		-config etc/signing-ca.conf \
+    		-out crl/signing-ca.crl	
+
+servercert: serverconfig
+	SAN="DNS:$(HOST)" \
 	$(OPENSSL) req \
-		-new \
-		-x509 \
-		-days $(DAYS) \
-		-batch \
-		-passin file:password \
-		-key cakey.pem \
-		-passout file:password \
-		-out ca.pem
+		-new -config etc/$(HOST).conf \
+		-out certs/$(HOST).csr \
+		-keyout certs/$(HOST).key \
+		-nodes \
+		-batch && \
+	$(OPENSSL) ca \
+		-config etc/signing-ca.conf \
+		-in certs/$(HOST).csr \
+		-out certs/$(HOST).crt \
+		-extensions server_ext \
+		-batch
 
-cert: 
-	mkdir -p CA/certs/$(TYPE)-$(HOST) && \
-	cd CA/certs/$(TYPE)-$(HOST) && \
-	IP=$$(ping -c 1 $(HOST) | head -n 1 | awk '{print $$3}' | sed -e "s/(//g" -e "s/)//g") && \
-	cp ../../ssl.cnf ssl.cnf && \
-	sed -i "s/req_extensions = .*$$/req_extensions = $(TYPE)/g" ssl.cnf && \
-	echo "IP.1 = $$IP" >> ssl.cnf && \
-	$(OPENSSL) genrsa \
-		-des3 \
-		-passout file:../../password \
-		-out key.pem $(SIZE) && \
-	$(OPENSSL) req  -subj "/CN=$(HOST)" -new \
-		-batch \
-		-passin file:../../password \
-		-key key.pem \
-		-passout file:../../password \
-		-out req.csr -config ssl.cnf && \
-	$(OPENSSL) x509 -req -days $(DAYS) \
-		-passin file:../../password \
-		-in req.csr \
-		-CA ../../ca.pem \
-		-CAkey ../../cakey.pem \
-		-CAserial ../../ca.srl \
-		-CAcreateserial \
-		-extfile ssl.cnf \
-		-extensions $(TYPE) \
-		-out cert.pem && \
-	$(OPENSSL) rsa \
-		-passin file:../../password \
-		-in key.pem \
-		-out key.pem \
-
-testserver:
-	$(DOCKER) -d -D -H tcp://0.0.0.0:$(DOCKERPORT) --tlsverify --tlscacert=CA/ca.pem --tlscert=CA/certs/daemon-$(HOST)/cert.pem --tlskey=CA/certs/daemon-$(HOST)/key.pem --label storage=$(HOST)
-
-testclient:
-	$(DOCKER) -H tcp://$(HOST):$(DOCKERPORT) --tlsverify --tlscacert=CA/ca.pem --tlscert=CA/certs/client-$(HOST)/cert.pem --tlskey=CA/certs/client-$(HOST)/key.pem version
-
-testswarm:
-	$(SWARM) manage $(HOST):2375 --tlsverify --tlscacert=CA/ca.pem --tlscert=CA/certs/swarm-$(HOST)/cert.pem --tlskey=CA/certs/swarm-$(HOST)/key.pem -H 0.0.0.0:2376
-	
-reset:
-	@-service docker stop
-	@rm -Rf /etc/pki/docker ~/.docker/*.pem
-	@sed -i "/^DOCKER_OPTS/d" /etc/default/docker 
-	@echo DOCKER_OPTS=\"-H unix:///var/run/docker.sock\" >> /etc/default/docker
-	@sed -i "/^export DOCKER/d" ~/.bashrc
-	@-service docker start
-	@echo "Reset your docker environment variable (unset DOCKER_TLS_VERIFY && unset DOCKER_HOST)"
-
-setup:
-	@-service docker stop
-	@mkdir -p /etc/pki/docker
-	@cp CA/certs/daemon-$(HOST)/*.pem /etc/pki/docker/
-	@cp CA/ca.pem /etc/pki/docker
-	@sed -i  "/^DOCKER_OPTS=/d" /etc/default/docker
-	@echo DOCKER_OPTS=\"-H tcp://0.0.0.0:$(DOCKERPORT) --tlsverify --tlscacert=/etc/pki/docker/ca.pem --tlscert=/etc/pki/docker/cert.pem --tlskey=/etc/pki/docker/key.pem --label storage=$(HOST)\" >> /etc/default/docker
-	@-service docker start
-	@cp CA/certs/client-$(HOST)/*.pem ~/.docker/
-	@cp CA/ca.pem ~/.docker/
-	@echo "export DOCKER_TLS_VERIFY=1" >> ~/.bashrc
-	@echo "export DOCKER_HOST=tcp://$(HOST):$(DOCKERPORT)" >> ~/.bashrc
-	@echo "Please do not forget to reload your .bashrc file (source ~/.bashrc)"
+bundle:
+	mkdir -p bundles/$(HOST)
+	cp certs/$(HOST).crt certs/$(HOST).key bundles/$(HOST)/
+	cp ca/signing-ca/01.pem bundles/$(HOST)/ca.pem
 
 clean:
-	rm -Rf CA
+	rm -Rf  etc ca certs crl
 
-.PHONY: ca clean  cert reset testclient testserver
+.PHONY: ca clean cert caconfig serverconfig crl bundle
 
 
 
