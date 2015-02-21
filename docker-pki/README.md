@@ -67,13 +67,13 @@ make bundle HOST=[your server hostname]
 
 - copy your certificates to (ca and cert only. NOT the key) ~/.docker/
 
-```
 - Add the following to your ~/.bashrc file
 
 ```
 DOCKER_HOST=tcp://[your hostname]:2375
 DOCKER_TLS_VERIFY=1
 ```
+
 - reload your ~/.bashrc file
 
 ```
