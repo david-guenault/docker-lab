@@ -65,7 +65,7 @@ sudo service docker restart
 make bundle HOST=[your server hostname]
 ```
 
-- copy your certificates to (ca and cert only. NOT the key) ~/.docker/
+- copy your certificates to ~/.docker/ . ONLY CERT AND CA CERTIFICATES NOT THE KEY
 
 - Add the following to your ~/.bashrc file
 
