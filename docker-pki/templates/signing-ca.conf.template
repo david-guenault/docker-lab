@@ -23,8 +23,10 @@ distinguished_name      = ca_dn                 # DN section
 req_extensions          = ca_reqext             # Desired extensions
 
 [ ca_dn ]
-0.domainComponent       = "@DOMAIN@"
+0.domainComponent       = "@TLD@"
+1.domainComponent       = "@DOMAIN@"
 organizationName        = "@ORGANIZATION@"
+organizationalUnitName  = "@ORGANIZATION@ Signing CA"
 commonName              = "@ORGANIZATION@ Signing CA"
 
 [ ca_reqext ]
@@ -56,7 +58,7 @@ name_opt                = ca_default            # Subject DN display options
 cert_opt                = ca_default            # Certificate display options
 copy_extensions         = copy                  # Copy extensions from CSR
 x509_extensions         = email_ext             # Default cert extensions
-default_crl_days        = 7                     # How long before next CRL
+default_crl_days        = @DAYS@                     # How long before next CRL
 crl_extensions          = crl_ext               # CRL extensions
 
 # Naming policies control which parts of a DN end up in the certificate and
@@ -65,6 +67,7 @@ crl_extensions          = crl_ext               # CRL extensions
 [ match_pol ]
 domainComponent         = match                 # Must match 'simple.org'
 organizationName        = match                 # Must match 'Simple Inc'
+organizationalUnitName  = optional              # Included if present
 commonName              = supplied              # Must be present
 
 [ any_pol ]
@@ -73,6 +76,7 @@ countryName             = optional
 stateOrProvinceName     = optional
 localityName            = optional
 organizationName        = optional
+organizationalUnitName  = optional
 commonName              = optional
 emailAddress            = optional
 

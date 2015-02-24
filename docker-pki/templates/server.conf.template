@@ -4,10 +4,10 @@
 # prompted for and must be specified in the SAN environment variable.
 
 [ default ]
-SAN                     = DNS:yourdomain.tld    # Default value
+SAN                     = DNS:@HOST@    # Default value
 
 [ req ]
-default_bits            = @SIZE@                  # RSA key size
+default_bits            = 2048                  # RSA key size
 encrypt_key             = no                    # Protect private key
 default_md              = sha1                  # MD to use
 utf8                    = yes                   # Input is UTF-8
@@ -18,13 +18,18 @@ req_extensions          = server_reqext         # Desired extensions
 
 [ server_dn ]
 0.domainComponent       = "1. Domain Component         (eg, com)      "
-organizationName        = "2. Organization Name        (eg, company)  "
-commonName              = "3. Common Name              (eg, FQDN)     "
+1.domainComponent       = "2. Domain Component         (eg, company)  "
+2.domainComponent       = "3. Domain Component         (eg, pki)      "
+organizationName        = "4. Organization Name        (eg, company)  "
+organizationalUnitName  = "5. Organizational Unit Name (eg, section)  "
+commonName              = "6. Common Name              (eg, FQDN)     "
 commonName_max          = 64
-0.domainComponent_default       = "@DOMAIN@"
+
+0.domainComponent_default       = "@TLD@"
+1.domainComponent_default       = "@DOMAIN@"
 organizationName_default        = "@ORGANIZATION@"
-commonName_default             = "@CN@"
-commonName_max          = 64
+organizationalUnitName_default  = "@UNIT@"
+commonName_default              = "@CN@"
 
 [ server_reqext ]
 keyUsage                = critical,digitalSignature,keyEncipherment
