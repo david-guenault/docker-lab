@@ -139,33 +139,51 @@ clientcert: clientconfig
     		-password pass: \
     		-nodes
 
-dockerbundle:
-	rm -Rf bundles/$(HOST)
-	mkdir -p bundles/$(HOST)
-	cp certs/server-$(HOST).crt bundles/$(HOST)/cert.pem
-	cp certs/server-$(HOST).key bundles/$(HOST)/key.pem
-	cp ca/ca-chain.crt bundles/$(HOST)/ca.pem
-	echo "#! /bin/bash" > bundles/$(HOST)/setup.sh
-	echo 'BASE=$$(dirname $$(readlink -f $$0))' >> bundles/$(HOST)/setup.sh
-	echo 'TLSOPTS="--tlsverify --tlscacert $(PKI)/ca.pem --tlscert $(PKI)/cert.pem --tlskey $(PKI)/key.pem"' >> bundles/$(HOST)/setup.sh
+dockerserverbundle:
+	rm -Rf bundles/server-$(HOST)
+	mkdir -p bundles/server-$(HOST)
+	cp certs/server-$(HOST).crt bundles/server-$(HOST)/cert.pem
+	cp certs/server-$(HOST).key bundles/server-$(HOST)/key.pem
+	cp ca/ca-chain.crt bundles/server-$(HOST)/ca.pem
+	echo "#! /bin/bash" > bundles/server-$(HOST)/setup.sh
+	echo 'BASE=$$(dirname $$(readlink -f $$0))' >> bundles/server-$(HOST)/setup.sh
+	echo 'TLSOPTS="--tlsverify --tlscacert $(PKI)/ca.pem --tlscert $(PKI)/cert.pem --tlskey $(PKI)/key.pem"' >> bundles/server-$(HOST)/setup.sh
 	# GET OPTS FROM DEFAULT
-	echo 'OPTS=$$(cat /etc/default/docker | sed -r "s/^[^\"]+\"([^\"]+)\"/\\1/g")' >> bundles/$(HOST)/setup.sh
+	echo 'OPTS=$$(cat /etc/default/docker | sed -r "s/^[^\"]+\"([^\"]+)\"/\\1/g")' >> bundles/server-$(HOST)/setup.sh
 	# REMOVE TLS EXISTING IF EXIST
-	echo 'OPTS=$$(echo $$OPTS | sed -r "s/(--tls[^\s-]+)(\s+[^\s-]+)?//g")' >> bundles/$(HOST)/setup.sh
+	echo 'OPTS=$$(echo $$OPTS | sed -r "s/(--tls[^\s-]+)(\s+[^\s-]+)?//g")' >> bundles/server-$(HOST)/setup.sh
 	# REMOVE OLD
-	echo "sed -ri '/^DOCKER_OPTS/d' /etc/default/docker" >> bundles/$(HOST)/setup.sh
+	echo "sed -ri '/^DOCKER_OPTS/d' /etc/default/docker" >> bundles/server-$(HOST)/setup.sh
 	# UPDATE DEFAULT
-	echo 'echo DOCKER_OPTS=\"$$OPTS $$TLSOPTS\" >> /etc/default/docker' >>  bundles/$(HOST)/setup.sh
+	echo 'echo DOCKER_OPTS=\"$$OPTS $$TLSOPTS\" >> /etc/default/docker' >>  bundles/server-$(HOST)/setup.sh
 	# DEPLOY CERTS
-	echo "mkdir -p $(PKI)" >> bundles/$(HOST)/setup.sh
-	echo 'cp $$BASE/ca.pem $$BASE/cert.pem $$BASE/key.pem $(PKI)/' >> bundles/$(HOST)/setup.sh
+	echo "mkdir -p $(PKI)" >> bundles/server-$(HOST)/setup.sh
+	echo 'cp $$BASE/ca.pem $$BASE/cert.pem $$BASE/key.pem $(PKI)/' >> bundles/server-$(HOST)/setup.sh
 	# MAKE SCRIPT EXECUTABLE
-	chmod +x bundles/$(HOST)/setup.sh
+	chmod +x bundles/server-$(HOST)/setup.sh
+
+dockerclientbundle:
+	mkdir -p bundles/client-$(HOST)
+	cp certs/client-$(HOST).crt bundles/client-$(HOST)/cert.pem
+	cp certs/client-$(HOST).key bundles/client-$(HOST)/key.pem
+	cp ca/ca-chain.crt bundles/client-$(HOST)/ca.pem
+	echo "#! /bin/bash" > bundles/client-$(HOST)/setup.sh
+	echo 'BASE=$$(dirname $$(readlink -f $$0))' >> bundles/client-$(HOST)/setup.sh
+	echo 'TLSOPTS="--tlsverify"' >> bundles/client-$(HOST)/setup.sh
+	# REMOVE OLD ENV FROM ~/.bashrc
+	echo 'sed -ri "/^export DOCKER/d" $$HOME/.bashrc' >> bundles/client-$(HOST)/setup.sh
+	# ADD TLS OPTIONS
+	echo 'echo export DOCKER_TLS_VERIFY=1 >> $$HOME/.bashrc' >> bundles/client-$(HOST)/setup.sh
+	echo 'echo export DOCKER_CERT_PATH=$$HOME/.docker >> $$HOME/.bashrc' >> bundles/client-$(HOST)/setup.sh
+	echo 'echo export DOCKER_HOST=tcp://$(HOST):2375 >> $$HOME/.bashrc' >> bundles/client-$(HOST)/setup.sh
+	echo 'cp $$BASE/ca.pem $$BASE/cert.pem $$BASE/key.pem $$HOME/.docker/' >> bundles/client-$(HOST)/setup.sh
+	# MAKE SCRIPT EXECUTABLE
+	chmod +x bundles/client-$(HOST)/setup.sh
 
 clean:
 	rm -Rf  etc ca certs crl
 
-.PHONY: ca clean clientcert crl dockerbundle servercert caconfig cleandockerclient clientconfig deploy2dockerclient dockertls serverconfig 
+.PHONY: ca clean clientcert crl dockerserverbundle dockerclientbundle servercert caconfig cleandockerclient clientconfig deploy2dockerclient dockertls serverconfig 
 
 
 
