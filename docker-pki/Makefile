@@ -5,6 +5,8 @@ UNIT=IT
 DAYS=3650
 SIZE=2048
 OPENSSL=/usr/bin/openssl
+DOCKER=/usr/bin/docker
+PKI=/etc/pki/docker
 
 caconfig:
 	mkdir -p etc
@@ -26,7 +28,7 @@ caconfig:
 		etc/signing-ca.conf
 
 serverconfig:
-	cp templates/server.conf.template etc/$(HOST).conf
+	cp templates/server.conf.template etc/server-$(HOST).conf
 	sed -i \
 		-e "s/@DOMAIN@/$(DOMAIN)/g" \
 		-e "s/@ORGANIZATION@/$(ORGANIZATION)/g" \
@@ -34,7 +36,20 @@ serverconfig:
 		-e "s/@UNIT@/$(UNIT)/g" \
 		-e "s/@SIZE@/$(SIZE)/g" \
 		-e "s/@CN@/$(HOST)/g" \
-		etc/$(HOST).conf
+		-e "s/@HOST@/$(HOST)/g" \
+		etc/server-$(HOST).conf
+
+clientconfig:
+	cp templates/client.conf.template etc/client-$(HOST).conf
+	sed -i \
+		-e "s/@DOMAIN@/$(DOMAIN)/g" \
+		-e "s/@ORGANIZATION@/$(ORGANIZATION)/g" \
+		-e "s/@TLD@/$(TLD)/g" \
+		-e "s/@UNIT@/$(UNIT)/g" \
+		-e "s/@SIZE@/$(SIZE)/g" \
+		-e "s/@CN@/$(HOST)/g" \
+		-e "s/@HOST@/$(HOST)/g" \
+		etc/client-$(HOST).conf
 
 ca: caconfig
 	mkdir -p ca/root-ca/private ca/root-ca/db crl certs && \
@@ -83,61 +98,69 @@ crl:
 servercert: serverconfig
 	SAN="DNS:$(HOST)" \
 	$(OPENSSL) req \
-		-new -config etc/$(HOST).conf \
-		-out certs/$(HOST).csr \
-		-keyout certs/$(HOST).key \
+		-new -config etc/server-$(HOST).conf \
+		-out certs/server-$(HOST).csr \
+		-keyout certs/server-$(HOST).key \
 		-nodes \
 		-batch && \
 	$(OPENSSL) ca \
 		-config etc/signing-ca.conf \
-		-in certs/$(HOST).csr \
-		-out certs/$(HOST).crt \
+		-in certs/server-$(HOST).csr \
+		-out certs/server-$(HOST).crt \
 		-extensions server_ext \
-		-batch && \
-	cat certs/$(HOST).crt  ca/ca-chain.crt > certs/$(HOST)-chain.crt
-
-pkcs12:
+		-batch
 	$(OPENSSL) pkcs12 -export \
     		-name "$(HOST)" \
-    		-inkey certs/$(HOST).key \
-    		-in certs/$(HOST).crt \
-    		-out certs/$(HOST).p12
+    		-inkey certs/server-$(HOST).key \
+    		-in certs/server-$(HOST).crt \
+    		-out certs/server-$(HOST).p12 \
+    		-password pass: \
+    		-nodes
 
-deploy2consul:
-	cp ca/signing-ca.crt ../dockerfiles/consul/ssl/ca.pem
-	cp certs/$(HOST)-chain.crt ../dockerfiles/consul/ssl/cert.pem
-	cp certs/$(HOST).key ../dockerfiles/consul/ssl/key.pem
+clientcert: clientconfig
+	SAN="DNS:$(HOST)" \
+	$(OPENSSL) req \
+		-new -config etc/client-$(HOST).conf \
+		-out certs/client-$(HOST).csr \
+		-keyout certs/client-$(HOST).key \
+		-nodes \
+		-batch && \
+	$(OPENSSL) ca \
+		-config etc/signing-ca.conf \
+		-in certs/client-$(HOST).csr \
+		-out certs/client-$(HOST).crt \
+		-extensions client_ext \
+		-batch
+	$(OPENSSL) pkcs12 -export \
+    		-name "$(HOST)" \
+    		-inkey certs/client-$(HOST).key \
+    		-in certs/client-$(HOST).crt \
+    		-out certs/client-$(HOST).p12 \
+    		-password pass: \
+    		-nodes
 
-dockertls:
-	@-echo "**************************************************************************"
-	@-echo "Launch docker in tls verify mode for testing purpose"
-	@-echo "**************************************************************************"
-	@-echo "If you want a more definitive solution :"
-	@-echo " > create a folder /etc/pki/docker/"
-	@-echo " > Copy the ca, cert and key to this folder"
-	@-echo " > Add the following to the DOCKER_OPTS line in /etc/default/docker:"
-	@-echo "   --tlsverify --tlscacert /etc/pki/docker/ca-chain.crt --tlscert /etc/pki/docker/[cername].crt --tlskey /etc/pki/docker/[certname].key"
-	@-echo "> Restart docker"
-	@-echo ""
-	@-echo "=> Hit enter to continue <="
-	@-read  ""
-	@-docker -H tcp://0.0.0.0:2375 --tlsverify --tlscacert ca/ca-chain.crt --tlscert certs/$(HOST).crt --tlskey certs/$(HOST).key -D -d
-
-deploy2dockerclient:
-	rm -f ~/.docker/*.pem
-	rm -f ~/.docker/*.crt
-	rm -f ~/.docker/*.key
-	cp ca/ca-chain.crt ~/.docker/ca.pem
-	certs/$(HOST).crt  ~/.docker/cert.pem
-	certs/$(HOST).key ~/.docker/key.pem
-	echo "DOCKER_HOST=tcp://$(HOST):$(PORT)" >> ~/.bashrc
-	echo "DOCKER_TLS_VERIFY=1" >> ~/.bashrc
-
+dockerbundle:
+	rm -Rf bundles/$(HOST)
+	mkdir -p bundles/$(HOST)
+	cp certs/server-$(HOST).csr bundles/$(HOST)/cert.pem
+	cp certs/server-$(HOST).key bundles/$(HOST)/key.pem
+	cp ca/ca-chain.crt bundles/$(HOST)/ca.pem
+	echo "#! /bin/bash" > bundles/$(HOST)/setup.sh
+	echo 'BASE=$$(dirname $$(readlink -f $$0))' >> bundles/$(HOST)/setup.sh
+	echo 'TLSOPTS="--tlsverify --tlscacert $(PKI)/ca.pem --tlscert $(PKI)/cert.pem --tlskey $(PKI)/key.pem"' >> bundles/$(HOST)/setup.sh
+	echo "sed -ri 's/(--tls[^\s-]+)(\s+[^\s-]+)?//g' /etc/default/docker" >> bundles/$(HOST)/setup.sh
+	echo 'OPTS=$$(cat /etc/default/docker | sed -r "s/.*\"([^\"]+)\"/\\1/g")' >> bundles/$(HOST)/setup.sh
+	echo 'sed -ri "/^DOCKER_OPTS/d" /etc/default/docker' >> bundles/$(HOST)/setup.sh
+	echo 'echo DOCKER_OPTS=\"$$OPTS $$TLSOPTS\" >> /etc/default/docker' >>  bundles/$(HOST)/setup.sh
+	echo "mkdir -p $(PKI)" >> bundles/$(HOST)/setup.sh
+	echo 'cp $$BASE/ca.pem $$BASE/cert.pem $$BASE/key.pem $(PKI)/' >> bundles/$(HOST)/setup.sh
+	chmod +x bundles/$(HOST)/setup.sh
 
 clean:
-	rm -Rf  etc ca certs crl bundles
+	rm -Rf  etc ca certs crl
 
-.PHONY: ca clean cert caconfig serverconfig crl bundle
+.PHONY: ca clean clientcert crl dockerbundle servercert caconfig cleandockerclient clientconfig deploy2dockerclient dockertls serverconfig 
+
 
 
 
