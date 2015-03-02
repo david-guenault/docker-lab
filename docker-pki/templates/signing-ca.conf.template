@@ -95,6 +95,13 @@ keyUsage                = critical,digitalSignature,keyEncipherment
 basicConstraints        = CA:false
 extendedKeyUsage        = serverAuth,clientAuth
 subjectKeyIdentifier    = hash
+authorityKeyIdentifier  = keyid:always[ server_ext ]
+
+[ client_ext ]
+keyUsage                = critical,digitalSignature
+basicConstraints        = CA:false
+extendedKeyUsage        = clientAuth
+subjectKeyIdentifier    = hash
 authorityKeyIdentifier  = keyid:always
 
 # CRL extensions exist solely to point to the CA certificate that has issued
@@ -102,3 +109,4 @@ authorityKeyIdentifier  = keyid:always
 
 [ crl_ext ]
 authorityKeyIdentifier  = keyid:always
+crlDistributionPoints=URI:@CRLURI@
