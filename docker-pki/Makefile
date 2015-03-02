@@ -142,18 +142,24 @@ clientcert: clientconfig
 dockerbundle:
 	rm -Rf bundles/$(HOST)
 	mkdir -p bundles/$(HOST)
-	cp certs/server-$(HOST).csr bundles/$(HOST)/cert.pem
+	cp certs/server-$(HOST).crt bundles/$(HOST)/cert.pem
 	cp certs/server-$(HOST).key bundles/$(HOST)/key.pem
 	cp ca/ca-chain.crt bundles/$(HOST)/ca.pem
 	echo "#! /bin/bash" > bundles/$(HOST)/setup.sh
 	echo 'BASE=$$(dirname $$(readlink -f $$0))' >> bundles/$(HOST)/setup.sh
 	echo 'TLSOPTS="--tlsverify --tlscacert $(PKI)/ca.pem --tlscert $(PKI)/cert.pem --tlskey $(PKI)/key.pem"' >> bundles/$(HOST)/setup.sh
-	echo "sed -ri 's/(--tls[^\s-]+)(\s+[^\s-]+)?//g' /etc/default/docker" >> bundles/$(HOST)/setup.sh
-	echo 'OPTS=$$(cat /etc/default/docker | sed -r "s/.*\"([^\"]+)\"/\\1/g")' >> bundles/$(HOST)/setup.sh
-	echo 'sed -ri "/^DOCKER_OPTS/d" /etc/default/docker' >> bundles/$(HOST)/setup.sh
+	# GET OPTS FROM DEFAULT
+	echo 'OPTS=$$(cat /etc/default/docker | sed -r "s/^[^\"]+\"([^\"]+)\"/\\1/g")' >> bundles/$(HOST)/setup.sh
+	# REMOVE TLS EXISTING IF EXIST
+	echo 'OPTS=$$(echo $$OPTS | sed -r "s/(--tls[^\s-]+)(\s+[^\s-]+)?//g")' >> bundles/$(HOST)/setup.sh
+	# REMOVE OLD
+	echo "sed -ri '/^DOCKER_OPTS/d' /etc/default/docker" >> bundles/$(HOST)/setup.sh
+	# UPDATE DEFAULT
 	echo 'echo DOCKER_OPTS=\"$$OPTS $$TLSOPTS\" >> /etc/default/docker' >>  bundles/$(HOST)/setup.sh
+	# DEPLOY CERTS
 	echo "mkdir -p $(PKI)" >> bundles/$(HOST)/setup.sh
 	echo 'cp $$BASE/ca.pem $$BASE/cert.pem $$BASE/key.pem $(PKI)/' >> bundles/$(HOST)/setup.sh
+	# MAKE SCRIPT EXECUTABLE
 	chmod +x bundles/$(HOST)/setup.sh
 
 clean:
