@@ -214,8 +214,7 @@ dockerclientbundle:
 clean:
 	rm -Rf  etc ca certs crl
 
-.PHONY: ca clean clientcert crl dockerserverbundle dockerclientbundle servercert caconfig cleandockerclient clientconfig deploy2dockerclient dockertls serverconfig 
-
+.PHONY: ca clientcert deploy2dockerclient removecrlendpoint startcrlendpoint caconfig clientconfig dockerclientbundle revokecert stopcrlendpoint clean crl dockerserverbundle servercert cleandockerclient crlimage dockertls serverconfig 
 
 
 
