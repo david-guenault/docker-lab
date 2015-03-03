@@ -19,12 +19,22 @@ TLD=com
 UNIT=IT
 DAYS=3650
 SIZE=2048
+CRLHOST=node3
+CRLPORT=8080
 ```
 
 Create the CA
 
 ```
 make ca
+```
+
+# Create the CRL (certificate revocation list)
+
+Note that this is curently not supported in docker server and client
+
+```
+make crl
 ```
 
 # Create the docker hosts certificates
@@ -47,7 +57,7 @@ make clientcert HOST=[your client hostname]
 make dockerserverbundle HOST=[your server hostname]
 ```
 
-This will create a folder server-[hostname] under bundles where you can find the ca certificates, the host certificate and the key. There is also a setup.sh script that will deploy and configure everything for you. Copy the folder on the remote host. Ssh into the host and then issue the setup.sh command. The restart your docker daemon. That's it !
+This will create a folder server-[hostname] under bundles folder where you can find the ca certificates, the host certificate and the key. There is also a setup.sh script that will deploy and configure everything for you. Copy the folder on the remote host. Ssh into the host and then issue the setup.sh command. The restart your docker daemon. That's it !
 
 
 # Deploy client certificates on the host you use to manage your docker nodes
@@ -63,3 +73,13 @@ This will create a folder client-[hostname] under bundles where you can find the
 ```
 source ~/.bashrc
 ```
+
+# Revoke certificate
+
+CRL are handled by the Makefile. To revoke a certificate you just have to issue the following command. 
+
+```
+make revoke TYPE=[client|server] HOST=[host name]
+```
+
+Behind the scene: this will revoke the certificate, update the crl and publish the new crl. 
