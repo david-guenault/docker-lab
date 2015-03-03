@@ -7,6 +7,10 @@ SIZE=2048
 OPENSSL=/usr/bin/openssl
 DOCKER=/usr/bin/docker
 PKI=/etc/pki/docker
+CRLHOST=host3
+CRLPORT=8080
+CRLURI=http://$(CRLHOST):$(CRLPORT)/signing-ca.crl
+CRLCONTAINER=$(ORGANIZATION)crl
 
 caconfig:
 	mkdir -p etc
@@ -18,6 +22,7 @@ caconfig:
 		-e "s/@ORGANIZATION@/$(ORGANIZATION)/g" \
 		-e "s/@SIZE@/$(SIZE)/g" \
 		-e "s/@DAYS@/$(DAYS)/g" \
+		-e "s#@CRLURI@#$(CRLURI)#g" \
 		etc/root-ca.conf
 	sed -i \
 		-e "s/@DOMAIN@/$(DOMAIN)/g" \
@@ -25,6 +30,7 @@ caconfig:
 		-e "s/@ORGANIZATION@/$(ORGANIZATION)/g" \
 		-e "s/@SIZE@/$(SIZE)/g" \
 		-e "s/@DAYS@/$(DAYS)/g" \
+		-e "s#@CRLURI@#$(CRLURI)#g" \
 		etc/signing-ca.conf
 
 serverconfig:
@@ -37,6 +43,7 @@ serverconfig:
 		-e "s/@SIZE@/$(SIZE)/g" \
 		-e "s/@CN@/$(HOST)/g" \
 		-e "s/@HOST@/$(HOST)/g" \
+		-e "s#@CRLURI@#$(CRLURI)#g" \
 		etc/server-$(HOST).conf
 
 clientconfig:
@@ -49,6 +56,7 @@ clientconfig:
 		-e "s/@SIZE@/$(SIZE)/g" \
 		-e "s/@CN@/$(HOST)/g" \
 		-e "s/@HOST@/$(HOST)/g" \
+		-e "s#@CRLURI@#$(CRLURI)#g" \
 		etc/client-$(HOST).conf
 
 ca: caconfig
@@ -93,7 +101,29 @@ ca: caconfig
 crl:
 	$(OPENSSL) ca -gencrl \
     		-config etc/signing-ca.conf \
-    		-out crl/signing-ca.crl	
+    		-out crl/signing-ca.crl && \
+    	$(MAKE) crlimage && \
+    	$(MAKE) startcrlendpoint 
+
+revokecert:
+	$(OPENSSL) ca \
+		-keyfile ca/signing-ca/private/signing-ca.key \
+		-cert ca/signing-ca.crt \
+		-revoke certs/$(TYPE)-$(HOST).crt \
+		-config etc/signing-ca.conf && \
+	$(MAKE) crl
+	
+crlimage:
+	$(DOCKER) build -t $$(echo $(ORGANIZATION) | tr '[:upper:]' '[:lower:]')crl .
+
+startcrlendpoint: stopcrlendpoint removecrlendpoint
+	$(DOCKER) run -d --name $$(echo $(CRLCONTAINER) | tr '[:upper:]' '[:lower:]') -p $(CRLPORT):80 $$(echo $(CRLCONTAINER) | tr '[:upper:]' '[:lower:]'):latest
+
+stopcrlendpoint:
+	@-$(DOCKER) stop $$(echo $(CRLCONTAINER) | tr '[:upper:]' '[:lower:]')
+
+removecrlendpoint:
+	@-$(DOCKER) rm $$(echo $(CRLCONTAINER) | tr '[:upper:]' '[:lower:]')
 
 servercert: serverconfig
 	SAN="DNS:$(HOST)" \
@@ -138,6 +168,7 @@ clientcert: clientconfig
     		-out certs/client-$(HOST).p12 \
     		-password pass: \
     		-nodes
+
 
 dockerserverbundle:
 	rm -Rf bundles/server-$(HOST)
