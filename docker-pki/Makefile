@@ -212,7 +212,7 @@ dockerclientbundle:
 	chmod +x bundles/client-$(HOST)/setup.sh
 
 clean:
-	rm -Rf  etc ca certs crl
+	rm -Rf  etc ca certs crl bundles
 
 .PHONY: ca clientcert deploy2dockerclient removecrlendpoint startcrlendpoint caconfig clientconfig dockerclientbundle revokecert stopcrlendpoint clean crl dockerserverbundle servercert cleandockerclient crlimage dockertls serverconfig 
 
