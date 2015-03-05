@@ -169,7 +169,6 @@ clientcert: clientconfig
     		-password pass: \
     		-nodes
 
-
 dockerserverbundle:
 	rm -Rf bundles/server-$(HOST)
 	mkdir -p bundles/server-$(HOST)
@@ -211,10 +210,15 @@ dockerclientbundle:
 	# MAKE SCRIPT EXECUTABLE
 	chmod +x bundles/client-$(HOST)/setup.sh
 
+nginxbundle:
+	mkdir -p bundles/nginx-$(HOST)
+	cat certs/server-$(HOST).crt ca/ca-chain.crt > bundles/nginx-$(HOST)/cert.pem
+	cp certs/server-$(HOST).key bundles/nginx-$(HOST)/key.pem
+
 clean:
 	rm -Rf  etc ca certs crl bundles
 
-.PHONY: ca clientcert deploy2dockerclient removecrlendpoint startcrlendpoint caconfig clientconfig dockerclientbundle revokecert stopcrlendpoint clean crl dockerserverbundle servercert cleandockerclient crlimage dockertls serverconfig 
+.PHONY: ca clientcert deploy2dockerclient removecrlendpoint startcrlendpoint caconfig clientconfig dockerclientbundle revokecert stopcrlendpoint clean crl dockerserverbundle servercert cleandockerclient crlimage dockertls serverconfig nginxbundle
 
 
 
