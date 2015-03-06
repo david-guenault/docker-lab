@@ -1,0 +1,24 @@
+registry:
+    image: registry
+    name: registry
+    environment:
+        - GUNICORN_ERROR_LOG_FILE=/tmp/registry.error.log
+        - GUNICORN_ACCESS_LOG_FILE=/tmp/registry.access.log
+	- GUNICORN_OPTS=--log-level debug
+    hostname: registry
+
+nginx:
+    image: centurylinklabs/nginx-ssl-proxy
+    name: nginx
+    hostname: node3
+    ports:
+        - "8080:8080"
+    environment:
+        - PUBLIC_IP_ADDR=10.10.0.21
+    links:
+        - registry:registry 
+    volumes:
+        - cert.pem:/tmp/cert.pem
+        - key.pem:/tmp/key.pem
+        - registry.htpasswd:/etc/nginx/docker-registry.htpasswd 
+        - docker-registry.conf:/usr/src/docker-registry.conf
