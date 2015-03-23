@@ -87,8 +87,8 @@ statushost=""
 dbhost="localhost"
 dbport=3306
 dbname="centreon_storage"
-dbuser="@NAGVISUSER@"
-dbpass="@NAGVISPASSWORD@"
+dbuser="@NAGVISDBUSER@"
+dbpass="@NAGVISDBPASSWORD@"
 dbinstancename="default"
 htmlcgi="/centreon"
 
