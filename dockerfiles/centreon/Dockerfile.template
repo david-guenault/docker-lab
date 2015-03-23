@@ -21,7 +21,7 @@ RUN     yum -y install wget yum-utils && \
             rpm -Uvh http://pkgs.repoforge.org/rpmforge-release/rpmforge-release-0.5.3-1.el6.rf.x86_64.rpm && \
             rpm -Uvh http://fr2.rpmfind.net/linux/epel/6/i386/epel-release-6-8.noarch.rpm && \
             yum-config-manager --disable rpmforge && \
-            yum-config-manager --disable epel 
+            yum-config-manager --disable epel && \
             yum -y update
 
 # setup ssh 
@@ -38,6 +38,7 @@ RUN     yum -y install MariaDB-client MariaDB-server && \
             centreon-base-config-centreon-engine \
             centreon \
             centreon-installed  \
+            centreon-nagvis \
             nagios-plugins \
             centreon-clapi \
             centreon-plugins \
@@ -63,11 +64,38 @@ RUN     /etc/init.d/mysql start && \
             chmod -R g+rw /etc/centreon-broker/* && \
             /etc/init.d/mysql stop
 
+# install nagvis
+RUN     cd /tmp && \
+            wget http://sourceforge.net/projects/nagvis/files/NagVis%201.7/nagvis-1.7.10.tar.gz/download -O nagvis-1.7.10.tar.gz && \
+            tar zxvf nagvis-1.7.10.tar.gz && \
+            cd nagvis-1.7.10 && \
+            ./install.sh -n /usr/sbin -a y -q -c n -r -o -F -u apache -g apache -w /etc/httpd/conf.d && \
+            cd ../ && \
+            wget --no-check-certificate https://forge.centreon.com/projects/centreon-nagvis-backend/repository/revisions/master/raw/GlobalBackendcentreonbroker.php && \
+            mv GlobalBackendcentreonbroker.php /usr/local/nagvis/share/server/core/classes/  && \
+            chown apache:apache /usr/local/nagvis/share/server/core/classes/GlobalBackendcentreonbroker.php && \
+            chmod 664 /usr/local/nagvis/share/server/core/classes/GlobalBackendcentreonbroker.php &&  \
+            sed -i "s/nagvis_session/PHPSESSID/g" /usr/local/nagvis/share/server/core/defines/global.php
+
+# fix time zone problem
+RUN     sed -i "s/^;date.timezone.*$/date.timezone = Europe\/Paris/g" /etc/php.ini
+
+# dirty bug fixing (see : https://forge.centreon.com/issues/6211)
+ RUN     /etc/init.d/mysql start && \
+             /usr/bin/centreon -u admin -p centreon -o CONTACT -a ADD -v "@NAGVISUSER@;@NAGVISUSER@;;@NAGVISPASSWORD@;1;1;;local" && \
+             mysql -u root -D centreon  -e "insert into options values ('centreon_nagvis_auth', 'single')" && \
+             mysql -u root -D centreon  -e "insert into options values ('centreon_nagvis_single_user', 'centreon_nagvis')" && \
+# create nagvis database access
+            mysql -u root -e "GRANT SELECT on centreon_storage.* to '@NAGVISUSER@'@'localhost' identified by '@NAGVISPASSWORD@'; FLUSH PRIVILEGES;"  && \
+            /etc/init.d/mysql stop
+
+COPY   nagvis.ini.php /usr/local/nagvis/etc/nagvis.ini.php
+
 # install pip and supervisor
 RUN     yum -y --enablerepo="epel" install python-pip && \
             pip install supervisor && \
             mkdir -p /etc/supervisord.d
 
 # command 
-CMD ["/usr/bin/supervisord", "-n", "--configuration=/etc/supervisord.conf"]
+CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.d/supervisord.conf"]
 
