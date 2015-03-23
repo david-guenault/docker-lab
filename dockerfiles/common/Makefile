@@ -1,6 +1,6 @@
 BROWSER=/usr/bin/google-chrome
 DOCKER=/usr/bin/docker
-DOCKERENTER=/usr/bin/docker-enter
+DOCKERENTER=/usr/local/bin/docker-enter
 IMAGE=$(REPO)/$(NAME):$(TAG)
 REPO=dguenault
 
@@ -26,6 +26,9 @@ start:
 
 stop:
 	$(DOCKER) stop $(RUNNAME) 
+
+kill:
+	$(DOCKER) kill $(RUNNAME) 
 
 supervisor:
 	$(BROWSER) http://$$($(DOCKER) inspect --format='{{.NetworkSettings.IPAddress}}' $(RUNNAME)):9001
