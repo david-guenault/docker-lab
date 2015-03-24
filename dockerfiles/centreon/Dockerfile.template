@@ -1,19 +1,6 @@
 FROM                centos:6.6 
 MAINTAINER     David GUENAULT
 
-
-# supervisord configuration files
-COPY  cbmod.sql /tmp/cbmod.sql
-COPY  supervisord.conf /etc/supervisord.d/supervisord.conf
-COPY  mysql.conf /etc/supervisord.d/mysql.conf
-COPY  apache.conf /etc/supervisord.d/apache.conf
-COPY  centcore.conf /etc/supervisord.d/centcore.conf
-COPY  cbd.conf /etc/supervisord.d/cbd.conf
-COPY  centengine.conf /etc/supervisord.d/centengine.conf
-COPY  snmpd.conf /etc/supervisord.d/snmpd.conf
-COPY  crond.conf /etc/supervisord.d/crond.conf
-RUN   sed -i "s/files=.*$/files=\/etc\/supervisord.d\/*.conf/g" /etc/supervisord.d/supervisord.conf
-
 # manage yum repositories
 RUN   yum -y install wget yum-utils && \
       wget http://yum.centreon.com/standard/3.0/stable/RPM-GPG-KEY-CES -O /etc/pki/rpm-gpg/RPM-GPG-KEY-CES && \
@@ -31,7 +18,7 @@ RUN   yum -y install openssh-server openssh-client && \
       sed -i 's/^#PermitRootLogin/PermitRootLogin/g' /etc/ssh/sshd_config && \
       /etc/init.d/sshd start && /etc/init.d/sshd stop
 
-# install centreon            
+# # install centreon            
 RUN   yum -y install MariaDB-client MariaDB-server && \
       /etc/init.d/mysql start && \
       yum -y install \
@@ -53,6 +40,21 @@ RUN   yum -y install MariaDB-client MariaDB-server && \
       chmod u+s /usr/lib/nagios/plugins/check_icmp && \
       /etc/init.d/mysql stop
 
+# supervisord configuration files
+COPY  cbmod.sql /tmp/cbmod.sql
+COPY  supervisord.conf /etc/supervisord.d/supervisord.conf
+COPY  mysql.conf /etc/supervisord.d/mysql.conf
+COPY  apache.conf /etc/supervisord.d/apache.conf
+COPY  centcore.conf /etc/supervisord.d/centcore.conf
+COPY  cbd.conf /etc/supervisord.d/cbd.conf
+COPY  centengine.conf /etc/supervisord.d/centengine.conf
+COPY  snmpd.conf /etc/supervisord.d/snmpd.conf
+COPY  crond.conf /etc/supervisord.d/crond.conf
+RUN   sed -i "s/files=.*$/files=\/etc\/supervisord.d\/*.conf/g" /etc/supervisord.d/supervisord.conf
+
+# fix time zone problem
+RUN     sed -i "s/^;date.timezone.*$/date.timezone = Europe\/Paris/g" /etc/php.ini
+
 # post install
 RUN   /etc/init.d/mysql start && \
       mysql centreon < /tmp/cbmod.sql && \
@@ -65,6 +67,7 @@ RUN   /etc/init.d/mysql start && \
       /etc/init.d/mysql stop
 
 # install nagvis
+COPY  nagvis.schema.sql /tmp/nagvis.schema.sql
 RUN   cd /tmp && \
       wget http://sourceforge.net/projects/nagvis/files/NagVis%201.7/nagvis-1.7.10.tar.gz/download -O nagvis-1.7.10.tar.gz && \
       tar zxvf nagvis-1.7.10.tar.gz && \
@@ -74,22 +77,26 @@ RUN   cd /tmp && \
       wget --no-check-certificate https://forge.centreon.com/projects/centreon-nagvis-backend/repository/revisions/master/raw/GlobalBackendcentreonbroker.php && \
       mv GlobalBackendcentreonbroker.php /usr/local/nagvis/share/server/core/classes/  && \
       chown apache:apache /usr/local/nagvis/share/server/core/classes/GlobalBackendcentreonbroker.php && \
-      chmod 664 /usr/local/nagvis/share/server/core/classes/GlobalBackendcentreonbroker.php &&  \
-      sed -i "s/nagvis_session/PHPSESSID/g" /usr/local/nagvis/share/server/core/defines/global.php
+      chmod 664 /usr/local/nagvis/share/server/core/classes/GlobalBackendcentreonbroker.php && \
+      sed -i "s/nagvis_session/PHPSESSID/g" /usr/local/nagvis/share/server/core/defines/global.php && \
+      sed -i "s/^define('AUTH_PASSWORD_SALT.*$/define('AUTH_PASSWORD_SALT', '@SALT@');/g" /usr/local/nagvis/share/server/core/defines/global.php
 
-# fix time zone problem
-RUN     sed -i "s/^;date.timezone.*$/date.timezone = Europe\/Paris/g" /etc/php.ini
+RUN   rm -f  /usr/local/nagvis/etc/auth.db && \
+      touch /usr/local/nagvis/etc/auth.db && \
+      sqlite3 /usr/local/nagvis/etc/auth.db < /tmp/nagvis.schema.sql && \
+      chown apache:apache /usr/local/nagvis/etc/auth.db
 
 # dirty bug fixing (see : https://forge.centreon.com/issues/6211)
 RUN   /etc/init.d/mysql start && \
       /usr/bin/centreon -u admin -p centreon -o CONTACT -a ADD -v "@NAGVISUSER@;@NAGVISUSER@;;@NAGVISPASSWORD@;1;1;;local" && \
       mysql -u root -D centreon  -e "insert into options values ('centreon_nagvis_auth', 'single')" && \
-      mysql -u root -D centreon  -e "insert into options values ('centreon_nagvis_single_user', 'centreon_nagvis')" && \
+      mysql -u root -D centreon  -e "insert into options values ('centreon_nagvis_single_user', '@NAGVISUSER@')" && \
 # create nagvis database access
       mysql -u root -e "GRANT SELECT on centreon_storage.* to '@NAGVISDBUSER@'@'localhost' identified by '@NAGVISDBPASSWORD@'; FLUSH PRIVILEGES;"  && \
       /etc/init.d/mysql stop
 
 COPY  nagvis.ini.php /usr/local/nagvis/etc/nagvis.ini.php
+RUN   chown apache:apache /usr/local/nagvis/etc/nagvis.ini.php
 
 # install pip and supervisor
 RUN   yum -y --enablerepo="epel" install python-pip && \
