@@ -11,7 +11,7 @@ NAGVISPASSWORD=cnagvis
 NAGVISDBUSER=nagvis
 NAGVISDBPASSWORD=nagvis
 NAGVISADMINUSER=admin
-NAGVISADMINPASSWORD=toto
+NAGVISADMINPASSWORD=admin
 NAGVISPASSWORDSALT=29d58ead6a65f5c00342ae03cdc6d26565e20954
 
 configure:
@@ -41,3 +41,42 @@ rebuild:
 	@-$(MAKE) rm 
 	@-$(MAKE) configure 
 	@-$(MAKE) build
+
+firstrun:
+	$(MAKE) initces
+	sleep 2
+	$(MAKE) runces
+
+initces:
+	$(DOCKER) create \
+	-v /tmp -v /var/lib/mysql \
+	-v /var/lib/centreon \
+	-v /var/lib/centreon-broker \
+	-v /var/lib/centreon-engine \
+	-v /var/log \
+	-v /usr/local/nagvis/etc \
+	-v /usr/local/nagvis/var \
+	-v /etc/centreon \
+	-v /usr/share/centreon \
+	-v /usr/share/centreon-engine \
+	-v /usr/local/nagvis/share/userfiles \
+	--name $(RUNNAME)data \
+	--entrypoint "/bin/bash" \
+	$(IMAGE)
+
+rmdata:
+	$(DOCKER) rm $(RUNNAME)data
+
+runces:
+	$(DOCKER) run -d --name $(RUNNAME) --hostname $(RUNNAME) --volumes-from $(RUNNAME)data -p 80:80 $(IMAGE)
+
+startces:
+	$(DOCKER) start $(RUNNAME)
+
+stopces:
+	$(DOCKER) stop $(RUNNAME)
+
+restartces:
+	@-$(MAKE) stopces
+	sleep 5
+	@-$(MAKE) startces
