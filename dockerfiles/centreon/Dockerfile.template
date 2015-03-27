@@ -31,6 +31,11 @@ RUN   yum -y install MariaDB-client MariaDB-server && \
       centreon-plugins \
       centreon-plugin-meta \
       net-snmp-utils \
+      centreon-lang-fr_FR \
+      centreon-snmptt \
+      centreon-trap \
+      centreon-syslog-frontend \
+      centreon-syslog-server \
       centreon-widget-graph-monitoring \
       centreon-widget-host-monitoring \ 
       centreon-widget-service-monitoring \
