@@ -36,6 +36,7 @@ RUN   yum -y install MariaDB-client MariaDB-server && \
       centreon-trap \
       centreon-syslog-frontend \
       centreon-syslog-server \
+      rsyslog \
       centreon-widget-graph-monitoring \
       centreon-widget-host-monitoring \ 
       centreon-widget-service-monitoring \
@@ -56,6 +57,7 @@ COPY  cbd.conf /etc/supervisord.d/cbd.conf
 COPY  centengine.conf /etc/supervisord.d/centengine.conf
 COPY  snmpd.conf /etc/supervisord.d/snmpd.conf
 COPY  crond.conf /etc/supervisord.d/crond.conf
+COPY  rsyslogd.conf /etc/supervisord.d/rsyslogd.conf
 RUN   sed -i "s/files=.*$/files=\/etc\/supervisord.d\/*.conf/g" /etc/supervisord.d/supervisord.conf
 
 # fix time zone problem
