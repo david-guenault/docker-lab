@@ -104,6 +104,13 @@ RUN   yum -y --enablerepo="epel" install python-pip && \
       pip install supervisor && \
       mkdir -p /etc/supervisord.d
 
+# install checkmyws plugin
+# see https://github.com/checkmyws/checkmyws-plugins/tree/master/nagios for usage
+RUN   pip install --upgrade checkmyws-python docopt && \
+      cd /usr/lib/nagios/plugins && \
+      wget --no-check-certificate https://raw.githubusercontent.com/checkmyws/checkmyws-plugins/master/nagios/check_mywebsite.py && \
+      chmod +x check_mywebsite.py
+
 # cleanup
 RUN   rm -Rf /tmp/*
 
