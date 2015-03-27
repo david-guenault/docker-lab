@@ -104,5 +104,8 @@ RUN   yum -y --enablerepo="epel" install python-pip && \
       pip install supervisor && \
       mkdir -p /etc/supervisord.d
 
+# cleanup
+RUN   rm -Rf /tmp/*
+
 # command 
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.d/supervisord.conf"]
