@@ -97,6 +97,8 @@ RUN   rm -f  /usr/local/nagvis/etc/auth.db && \
 # dirty bug fixing (see : https://forge.centreon.com/issues/6211)
 RUN   /etc/init.d/mysql start && \
       /usr/bin/centreon -u admin -p centreon -o CONTACT -a ADD -v "@NAGVISUSER@;@NAGVISUSER@;;@NAGVISPASSWORD@;1;1;;local" && \
+      /usr/bin/centreon -u admin -p centreon -o CONTACT -a setParam -v "@NAGVISUSER@;hostnotifcmd;host-notify-by-email" && \
+      /usr/bin/centreon -u admin -p centreon -o CONTACT -a setParam -v "@NAGVISUSER@;svcnotifcmd;service-notify-by-email" && \
       mysql -u root -D centreon  -e "insert into options values ('centreon_nagvis_auth', 'single')" && \
       mysql -u root -D centreon  -e "insert into options values ('centreon_nagvis_single_user', '@NAGVISUSER@')" && \
 # create nagvis database access
@@ -120,6 +122,12 @@ RUN   pip install --upgrade checkmyws-python docopt && \
 
 # cleanup
 RUN   rm -Rf /tmp/*
+
+# fix password, installation and permissions for centreon_syslog module (dirty hack)
+RUN   chmod g+w /etc/centreon-syslog/syslog.conf.* && \
+          CENTSYSLOGPASS=$(cat /etc/centreon-syslog/syslog.conf.pm | grep "^PASSWORD" | awk -F= '{print $2}') && \
+          sed -i "s/syslogapass/$CENTSYSLOGPASS/g" /etc/centreon-syslog/syslog.conf.php
+
 
 # command 
 CMD ["/usr/bin/supervisord", "-n", "-c", "/etc/supervisord.d/supervisord.conf"]
