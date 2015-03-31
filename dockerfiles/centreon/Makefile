@@ -6,8 +6,8 @@ DOCKER=/usr/bin/docker
 SSHPASSWORD=centreon
 SUPERVISORUSER=admin
 SUPERVISORPASSWORD=admin
-NAGVISUSER=cnagvis
-NAGVISPASSWORD=cnagvis
+NAGVISUSER=centreon_nagvis
+NAGVISPASSWORD=centreon_nagvis
 NAGVISDBUSER=nagvis
 NAGVISDBPASSWORD=nagvis
 NAGVISADMINUSER=admin
@@ -37,10 +37,21 @@ configure:
 	sed -i "s/@NAGVISHASH@/$$HASH/g" nagvis.schema.sql 
 
 rebuild: 
-	@-$(MAKE) kill
-	@-$(MAKE) rm 
+	@-$(MAKE) killces
+	@-$(MAKE) cleances
 	@-$(MAKE) configure 
 	@-$(MAKE) build
+
+killces:
+	$(DOCKER) kill $(RUNNAME)
+
+rmces:
+	$(DOCKER) rm $(RUNNAME)
+
+rmcesdata:
+	$(DOCKER) rm $(RUNNAME)data
+
+cleances: rmces rmcesdata
 
 firstrun:
 	$(MAKE) initces
