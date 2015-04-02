@@ -2,11 +2,11 @@
 # MODIFY WHAT YOU NEED HERE
 ######################################
 # The domain Name to be used
-DOMAIN=dock2dns.lan
+DOMAIN=box4prod.lan
 DNSFORWARD=8.8.8.8:53
 # DOCKER NODES
-LOCAL=node1
-NODES=node2 node3
+LOCAL=node3
+NODES=node2 node1
 # DOCKER HOSTS / PORTS
 LOCALDOCKERHOST=$(LOCAL)
 DOCKERPORT=2375
@@ -43,7 +43,7 @@ SWARMIMAGE=$(REPOSITORY)/$(SWARMIMAGENAME):$(SWARMTAG)
 # CONSUL
 CONSULDC=box4prod
 CONSULIMAGENAME=consul
-CONSULTAG=0.4.1
+CONSULTAG=0.5.0
 CONSULIMAGE=$(REPOSITORY)/$(CONSULIMAGENAME):$(CONSULTAG)
 
 help:
@@ -68,7 +68,7 @@ startconsul:
 	for NODE in $$ALLNODES; \
 	do \
 		NODEIP=$$(ping -c 1 $$NODE | head -n 1 | awk '{print $$3}' | sed -e "s/(//g" -e "s/)//g"); \
-		$(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) run -d \
+		echo $(DOCKER) -H tcp://$$NODE:$(DOCKERPORT) run -d \
 			--name consul-$$NODE \
 			--hostname consul-$$NODE \
 			-p 8300:8300 \
@@ -82,7 +82,7 @@ startconsul:
 			 $(CONSULIMAGE) \
 			 	agent \
 			 	-server -data-dir /tmp/consul \
-				-config-file /tmp/consul.cfg  \
+				-config-file /etc/consul/consul.cfg  \
 			 	-node consul-$$NODE  \
 			 	-bootstrap-expect $$NODECOUNT  \
 			 	-bind 0.0.0.0  \

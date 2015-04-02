@@ -1,11 +1,9 @@
 registry:
     image: registry
     name: registry
-    environment:
-        - GUNICORN_ERROR_LOG_FILE=/tmp/registry.error.log
-        - GUNICORN_ACCESS_LOG_FILE=/tmp/registry.access.log
-	- GUNICORN_OPTS=--log-level debug
     hostname: registry
+    expose:
+        - "5000:5000"
 
 nginx:
     image: centurylinklabs/nginx-ssl-proxy
@@ -18,7 +16,6 @@ nginx:
     links:
         - registry:registry 
     volumes:
-        - cert.pem:/tmp/cert.pem
-        - key.pem:/tmp/key.pem
+        - cert.pem:/etc/ssl/certs/docker-registry
+        - key.pem:/etc/ssl/certs/docker-registry
         - registry.htpasswd:/etc/nginx/docker-registry.htpasswd 
-        - docker-registry.conf:/usr/src/docker-registry.conf
