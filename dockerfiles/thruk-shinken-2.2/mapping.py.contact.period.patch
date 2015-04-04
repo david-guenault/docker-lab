@@ -1,0 +1,20 @@
+--- mapping.py.orig 2015-04-04 09:55:11.586885213 +0200
++++ mapping.py  2015-04-04 09:55:48.633657815 +0200
+@@ -1726,7 +1726,7 @@
+         },
+         'host_notification_period': {
+             'description': 'The time period in which the contact will be notified about host problems',
+-            'function': lambda item, req: item.host_notification_period,
++            'function': lambda item, req: item.host_notification_period.get_name(),
+         },
+         'host_notifications_enabled': {
+             'description': 'Whether the contact will be notified about host problems in general (0/1)',
+@@ -1763,7 +1763,7 @@
+         },
+         'service_notification_period': {
+             'description': 'The time period in which the contact will be notified about service problems',
+-            'function': lambda item, req: item.service_notification_period,
++            'function': lambda item, req: item.service_notification_period.get_name(),
+         },
+         'service_notifications_enabled': {
+             'description': 'Whether the contact will be notified about service problems in general (0/1)',

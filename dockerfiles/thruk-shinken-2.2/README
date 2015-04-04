@@ -1,0 +1,12 @@
+Caution this docker file use shinken-base-2.2 image. You must build this one before. 
+
+This image provide a full shinken installation along with thruk
+
+You can customize ssh password in the Docker file at the very begining. 
+
+How to Buil
+
+```
+make build
+```
+
