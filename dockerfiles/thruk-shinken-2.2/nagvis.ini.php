@@ -299,7 +299,7 @@ backend="live_1"
 ; in the share/nagvis/styles directory)
 ;stylesheet=""
 ; target for the icon links
-;urltarget="_self"
+urltarget="_parent"
 ; URL template for host object links
 ;hosturl="[htmlcgi]/status.cgi?host=[host_name]"
 ; URL template for hostgroup object links

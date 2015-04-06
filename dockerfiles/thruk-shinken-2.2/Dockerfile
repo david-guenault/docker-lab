@@ -36,6 +36,7 @@ RUN     sed -i -E "s/^\s+modules/& livestatus,webui/g" /etc/shinken/brokers/brok
 
 # basic thruk config
 COPY    thruk_local.conf /etc/thruk/thruk_local.conf
+COPY    menu_local.conf /etc/thruk/menu_local.conf
 
 # supervisor
 RUN     pip install supervisor && \
