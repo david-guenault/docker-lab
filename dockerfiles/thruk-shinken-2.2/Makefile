@@ -9,8 +9,3 @@ rebuild:
 	@-$(MAKE) rm 
 	@-$(MAKE) clean
 	$(MAKE) build
-	$(MAKE) run 
-	sleep 2
-	$(MAKE) ip 
-	echo "http://$$($(MAKE) ip)/thruk/"
-	$(MAKE) enter
