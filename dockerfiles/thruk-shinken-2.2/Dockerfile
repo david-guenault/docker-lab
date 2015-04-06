@@ -1,21 +1,32 @@
 FROM    dguenault/shinken-base:2.2
 MAINTAINER David GUENAULT
 
-ENV     SSHPASSWORD=root
+ENV     DEBIAN_FRONTEND noninteractive
+ENV     SSHPASSWORD root
 
 # upgrade
 RUN      apt-get update && apt-get -y upgrade
 
+# some prerequisites
+RUN     apt-get install -y snmpd python-pip openssh-server sudo
+
 # Install thruk
-RUN     echo 'deb http://labs.consol.de/repo/stable/debian wheezy main' >> /etc/apt/sources.list && \
+RUN     gpg --keyserver keys.gnupg.net --recv-keys F8C1CA08A57B9ED7 && \
+            gpg --armor --export F8C1CA08A57B9ED7 | apt-key add - && \
+            echo 'deb http://labs.consol.de/repo/stable/debian wheezy main' >> /etc/apt/sources.list && \
             apt-get update && \
-            apt-get -y --force-yes install thruk snmpd python-pip openssh-server
+            apt-get -y --force-yes install thruk 
 
 #openssh-server
 RUN     mkdir /var/run/sshd && \
-            echo 'root:$SSHPASSWORD' | chpasswd && \
-            sed -i 's/^#PermitRootLogin/PermitRootLogin/g' /etc/ssh/sshd_config && \
-            /etc/init.d/ssh start && /etc/init.d/ssh stop
+            echo "root:$SSHPASSWORD" | chpasswd && \
+            echo 'PermitRootLogin yes' /etc/ssh/sshd_config && \
+            /etc/init.d/ssh start && /etc/init.d/ssh stop && \
+            su -c "ssh-keygen -t rsa -N '' -f /home/shinken/.ssh/id_rsa" - shinken && \ 
+            sed -i "s/usePAM yes/usePam no/g" /etc/ssh/sshd_config && \
+            cat /home/shinken/.ssh/id_rsa.pub > /home/shinken/.ssh/authorized_keys && \
+            chown -R shinken:shinken /home/shinken/.ssh && \
+            chmod 0600 /home/shinken/.ssh/authorized_keys /home/shinken/.ssh/id_rsa
 
 # enable shinken modules
 RUN     sed -i -E "s/^\s+modules/& livestatus,webui/g" /etc/shinken/brokers/broker-master.cfg && \
@@ -42,12 +53,20 @@ COPY    mapping.py.contact.period.patch /var/lib/shinken/modules/livestatus/mapp
 RUN     cd /var/lib/shinken/modules/livestatus && \
              patch < mapping.py.contact.period.patch
 
+# sudo configuration 
+COPY   sudoers.d.shinken /etc/sudoers.d/shinken
+RUN     chmod 440 /etc/sudoers.d/shinken 
+
 # fix config snmpd
 RUN     echo "view   systemonly  included   .1" >> /etc/snmp/snmpd.conf
 
+# default host config
+COPY   shinken.cfg /etc/shinken/hosts/shinken.cfg
+RUN     rm -f /etc/shinken/hosts/localhost.cfg
+
 # permissions
 RUN     chown -R www-data:www-data /etc/thruk/* && \
-            chown -R shinken:shinken /var/lib/shinken && \
+            chown -R shinken:shinken /var/lib/shinken /var/run/shinken && \
             usermod -a -G shinken www-data && \
             chown -R shinken:www-data /etc/shinken && \
             chmod -R g+rw /etc/shinken

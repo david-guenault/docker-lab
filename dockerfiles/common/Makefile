@@ -3,6 +3,7 @@ DOCKER=/usr/bin/docker
 DOCKERENTER=/usr/local/bin/docker-enter
 IMAGE=$(REPO)/$(NAME):$(TAG)
 REPO=dguenault
+SHELL=/bin/bash
 
 clean:
 	- @echo "Remove container $(RUNNAME)"
