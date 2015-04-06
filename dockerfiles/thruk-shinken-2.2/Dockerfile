@@ -10,7 +10,7 @@ ENV     NAGVISSALT 29d58ead6a65f5c00342ae03cdc6d26565e20954
 RUN      apt-get update && apt-get -y upgrade
 
 # some prerequisites
-RUN     apt-get install -y snmpd python-pip openssh-server sudo
+RUN     apt-get install -y snmpd python-pip openssh-server sudo 
 
 # Install thruk
 RUN     gpg --keyserver keys.gnupg.net --recv-keys F8C1CA08A57B9ED7 && \
@@ -71,6 +71,7 @@ RUN     rm -f /etc/shinken/hosts/localhost.cfg
 RUN     chown -R www-data:www-data /etc/thruk/* && \
             chown -R shinken:shinken /var/lib/shinken /var/run/shinken && \
             usermod -a -G shinken www-data && \
+            usermod -a -G www-data shinken && \
             chown -R shinken:www-data /etc/shinken && \
             chmod -R g+rw /etc/shinken
 
