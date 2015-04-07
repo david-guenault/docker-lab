@@ -9,3 +9,10 @@ rebuild:
 	@-$(MAKE) rm 
 	@-$(MAKE) clean
 	$(MAKE) build
+
+startshinken:
+	$(DOCKER) run -d --name $(RUNNAME) --hostname $(RUNNAME) -p 80:80 -p 7767:7767 $(IMAGE)
+
+stopshinken:
+	$(DOCKER) stop $(RUNNAME)
+
