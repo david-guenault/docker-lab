@@ -1,0 +1,4 @@
+User_Alias      SHINKEN=www-data,shinken
+Defaults:SHINKEN !requiretty
+SHINKEN   ALL = NOPASSWD: /usr/local/bin/supervisorctl
+SHINKEN   ALL = NOPASSWD: /etc/init.d/shinken
