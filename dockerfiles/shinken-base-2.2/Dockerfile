@@ -67,6 +67,7 @@ RUN     shinken --init && \
             shinken install ip-tag && \
             shinken install ws-arbiter && \
             shinken install pickle-retention-file-generic && \
+            shinken install pickle-retention-file-scheduler && \
             shinken install hack-commands-poller-tag-arbiter && \
             shinken install named-pipe && \
             shinken install csv-tag && \
@@ -78,13 +79,15 @@ RUN     shinken --init && \
             shinken install logstore-mongodb && \
             shinken install ui-graphite && \
             shinken install sqlitedb && \
-            shinken install pickle-retention-file-generic && \
             shinken install graphite && \
             shinken install logstore-sqlite && \
             shinken install sqlitelog && \
             shinken install snapshot-mongodb && \
             shinken install retention-mongodb && \
             shinken install auth-cfg-password
+
+# enable scheduler retention
+RUN      sed -i -E "s/^(\s+modules).*$/\1 pickle-retention-file/g" /etc/shinken/schedulers/scheduler-master.cfg
 
 #########################################################
 # packs
@@ -95,6 +98,41 @@ RUN     shinken --init && \
             shinken install arbiter2 && \
             shinken install linux-ssh && \
             shinken install linux-snmp && \
+            shinken install ldap && \
+            shinken install imap && \
+            shinken install arbiter2 && \
+            shinken install san-switch && \
+            shinken install san-switch && \
+            shinken install oracle && \
+            shinken install exchange && \
+            shinken install windows && \
+            shinken install vmware && \
+            shinken install aix && \
+            shinken install ftp && \
+            shinken install http && \
+            shinken install ssh && \
+            shinken install dc && \
+            shinken install hpux && \
+            shinken install dns && \
+            shinken install mysql && \
+            shinken install activemq && \
+            shinken install memcached && \
+            shinken install hp-asm && \
+            shinken install pop3 && \
+            shinken install dhcp && \
+            shinken install smtp && \
+            shinken install emc && \
+            shinken install mongodb && \
+            shinken install ntp && \
+            shinken install http-proxy && \
+            shinken install tomcat && \
+            shinken install cisco && \
+            shinken install asterisk && \
+            shinken install hp && \
+            shinken install postgresql && \
+            shinken install hp-blades-chassis && \
+            shinken install switch && \
+            shinken install mssql && \
             pip install docopt checkmyws-python
 
 #########################################################
