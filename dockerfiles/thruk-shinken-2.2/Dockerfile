@@ -37,6 +37,9 @@ RUN     sed -i -E "s/^\s+modules/& livestatus,webui/g" /etc/shinken/brokers/brok
 COPY    thruk/thruk_local.conf /etc/thruk/thruk_local.conf
 COPY    thruk/menu_local.conf /etc/thruk/menu_local.conf
 
+# enable html output
+RUN      sed -i -E "s/escape_html_tags=1/escape_html_tags=0/g" /etc/thruk/cgi.cfg
+
 # supervisor
 RUN     pip install supervisor && \
             mkdir -p /etc/supervisord.d
