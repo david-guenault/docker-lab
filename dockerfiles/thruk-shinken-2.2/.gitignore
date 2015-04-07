@@ -1,2 +1,3 @@
 postfix/sasl_passwd
 sshkeys/*
+shinken-hosts/*
