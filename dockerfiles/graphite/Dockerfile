@@ -20,7 +20,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -y install \
        pip install https://github.com/graphite-project/ceres/tarball/master && \
        pip install whisper && \
        pip install carbon && \
-       pip install graphite-web
+       pip install graphite-web && \
+       pip install pytz 
 
 # apache conf
 RUN a2dissite 000-default &&\
