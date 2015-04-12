@@ -45,7 +45,7 @@ RUN cd /opt/graphite/conf && \
         cp local_settings.py.example local_settings.py && \
         # sed -i -E "s/^TIME_ZONE.*$/TIME_ZONE = '"$(cat /etc/timezone)"'" local_settings.py  && \
         KEY=$(python -c 'import random; print "".join([random.choice("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*(-_=+)") for i in range(50)])') && \
-        sed -i -E "s/SECRET_KEY = 'UNSAFE_DEFAULT'/SECRET_KEY = '"$KEY"'" local_settings.py
+        sed -i -E "s/SECRET_KEY = 'UNSAFE_DEFAULT'/SECRET_KEY = '"$KEY"'/g" local_settings.py
 
 # init
 RUN cd /opt/graphite/webapp/graphite && \
