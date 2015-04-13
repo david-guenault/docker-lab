@@ -1,0 +1,21 @@
+graphite:
+    image: dguenault/graphite:latest
+    ports:
+        - "8080:80"
+        - "2003:2003"
+        - "2004:2004"
+        - "7002:7002"
+
+shinken:
+    image: dguenault/ske:2.03-update
+    ports:
+        - "80:80"
+        - "7767:7767"
+        - "7766:7766"
+    links:
+        - graphite:graphite
+    volumes:
+        - shinken-config/modules/graphite.cfg:/etc/shinken/modules/graphite.cfg
+    #     - ui-graphite.cfg:/etc/shinken/modules/ui-graphite.cfg
+    #     - webui.cfg:/etc/shinken/modules/webui.cfg
+
