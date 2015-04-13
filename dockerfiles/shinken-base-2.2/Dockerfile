@@ -107,7 +107,6 @@ RUN     shinken --init && \
             shinken install exchange && \
             shinken install windows && \
             shinken install vmware && \
-            shinken install aix && \
             shinken install ftp && \
             shinken install http && \
             shinken install ssh && \
