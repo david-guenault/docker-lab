@@ -1,3 +1,24 @@
+# Description
+
+Shinken with Thruk and Nagvis frontends. This image also embed the following :
+- rsyslog
+- ssh server 
+- snmp server (dumb)
+- cron
+- postfix smarthost (use gmail for exemple)
+
+# How to build
+
+```
+make build
+```
+
+This will produce an image tagged as dguenault/thruk-shinken-2.2. You can modify the tag by passing variables
+
+```
+
+```
+
 Caution this docker file use shinken-base-2.2 image. You must build this one before. 
 
 This image provide a full shinken installation along with thruk

@@ -2,8 +2,6 @@ FROM    dguenault/shinken-base:2.2
 MAINTAINER David GUENAULT
 
 ENV     DEBIAN_FRONTEND noninteractive
-ENV     NAGVISVERSION 1.8.2
-ENV     NAGVISSALT 29d58ead6a65f5c00342ae03cdc6d26565e20954
 
 # upgrade
 RUN      apt-get update && apt-get -y upgrade
@@ -50,6 +48,8 @@ COPY   supervisor/ssh.conf /etc/supervisord.d/ssh.conf
 COPY   supervisor/thruk.conf /etc/supervisord.d/thruk.conf
 COPY   supervisor/shinken.conf /etc/supervisord.d/shinken.conf
 COPY   supervisor/supervisord.conf /etc/supervisord.conf
+COPY   supervisor/rsyslog.conf /etc/supervisord.d/rsyslog.conf
+COPY   supervisor/postfix.conf /etc/supervisord.d/postfix.conf
 
 # patch livestatus module for contact notification period
 COPY    mapping.py.contact.period.patch /var/lib/shinken/modules/livestatus/mapping.py.contact.period.patch
@@ -75,19 +75,6 @@ RUN     chown -R www-data:www-data /etc/thruk/* && \
             chown -R shinken:www-data /etc/shinken && \
             chmod -R g+rw /etc/shinken
 
-# nagvis
-RUN   cd /tmp && \
-      apt-get -y install libapache2-mod-php5 php5-gd php-gettext php-net-socket php5-sqlite && \
-      wget http://www.nagvis.org/share/nagvis-$NAGVISVERSION.tar.gz -O nagvis-$NAGVISVERSION.tar.gz && \
-      tar zxvf nagvis-$NAGVISVERSION.tar.gz && \
-      cd nagvis-$NAGVISVERSION && \
-      ./install.sh -n /usr/sbin -a y -q -c n -r -o -F -u www-data -g www-data -w /etc/apache2/conf.d && \
-      # sed -i "s/nagvis_session/PHPSESSID/g" /usr/local/nagvis/share/server/core/defines/global.php && \
-      sed -i "s/^define('AUTH_PASSWORD_SALT.*$/define('AUTH_PASSWORD_SALT', '$NAGVISSALT');/g" /usr/local/nagvis/share/server/core/defines/global.php
-
-COPY    nagvis/nagvis.ini.php /usr/local/nagvis/etc/nagvis.ini.php
-RUN     chown www-data:www-data /usr/local/nagvis/etc/nagvis.ini.php
-
 # postfix for notifications in gmail (do not forget to create sasl_passwd file before building)
 RUN      apt-get -y install rsyslog postfix mailutils libsasl2-2 ca-certificates libsasl2-modules vim-nox procps python-pip && \
             echo "postfix" > /etc/mailname
@@ -96,16 +83,12 @@ COPY    postfix/main.cf     /etc/postfix/main.cf
 COPY    postfix/sasl_passwd /etc/postfix/sasl_passwd
 
 RUN      postmap /etc/postfix/sasl_passwd && \
-            chown postfix /etc/postfix/sasl_passwd*
+            chown postfix /etc/postfix/sasl_passwd* && \
             chmod 400 /etc/postfix/sasl_passwd
 
 RUN     cat /etc/ssl/certs/Thawte_Premium_Server_CA.pem | tee -a /etc/postfix/cacert.pem
 
-COPY   supervisor/rsyslog.conf /etc/supervisord.d/rsyslog.conf
-COPY   supervisor/postfix.conf /etc/supervisord.d/postfix.conf
-
-
-# env processing
+RUN      sed  -i -E "s/(\s+)?(modules.*$)/\1\2,graphite/g" /etc/shinken/brokers/broker-master.cfg
 
 CMD ["/usr/local/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
 
