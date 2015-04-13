@@ -1,0 +1,28 @@
+graphite:
+    image: dguenault/graphite:latest
+    ports:
+        - "8080:80"
+        - "2003:2003"
+        - "2004:2004"
+        - "7002:7002"
+
+shinken:
+    image: dguenault/shinken-thruk:latest
+    ports:
+        - "80:80"
+        - "7767:7767"
+    links:
+        - graphite:graphite
+    volumes:
+        - graphite.cfg:/etc/shinken/modules/graphite.cfg
+        - ui-graphite.cfg:/etc/shinken/modules/ui-graphite.cfg
+        - webui.cfg:/etc/shinken/modules/webui.cfg
+
+nagvis:
+    image: dguenault/nagvis:latest
+    ports:
+        - "8081:80"
+    links:
+        - shinken:shinken
+    volumes:
+        - nagvis.ini.php:/usr/local/nagvis/etc/nagvis.ini.php
