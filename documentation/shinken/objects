@@ -1,0 +1,137 @@
+digraph objects {
+
+    /*splines=ortho;*/
+
+    node [shape=box, style=filled,margin=0.3];
+
+    subgraph cluster_host {
+        color=blue;
+        fontcolor=blue;
+        node [style=filled,fillcolor=lightblue,shape="box", color=blue, fontcolor=blue];
+        edge [color=blue, fontcolor = blue];
+        host -> hostgroup[dir="both"];
+        host -> hostescalation[dir="both"];
+        host -> hostdependency;
+        host -> host[label="parents"];
+        hostdependency -> hostgroup[label="dependent_hostgroup_name\n hostgroup_name"];
+        hostgroup -> hostgroup;
+        hostescalation -> hostgroup;
+        label = "HOST";
+    }
+
+    subgraph cluster_service {
+        color=purple4;
+        fontcolor=purple4;
+        node [style=filled, fillcolor=plum, color=purple4, fontcolor=purple4];
+        edge [color=purple4, fontcolor=purple4];
+        service -> servicegroup[dir="both"];
+        service -> servicedependency[dir="both"];
+        servicegroup -> servicegroup;
+        service -> serviceescalation;
+        label = "SERVICE";
+    }
+
+    subgraph cluster_contact{
+        color=red;
+        fontcolor=red;
+        node [
+            style=filled,
+            fillcolor=pink,
+            shape="box", 
+            color=red, 
+            fontcolor=red
+        ];
+        edge [color=red, fontcolor = red];
+        contact -> contactgroup[dir="both"];
+        contactgroup -> contactgroup;
+        label = "CONTACT";
+    }
+
+    timeperiod[
+        fillcolor=maroon1, 
+        color=maroon4, 
+        fontcolor=maroon4
+    ];
+    command[
+        fillcolor=palegreen1
+        color=palegreen4,
+        fontcolor=palegreen4,
+    ];
+    resultmodulation[
+        fillcolor=chartreuse,
+        color=chartreuse4,
+        fontcolor=chartreuse4
+    ];
+    notificationway[
+        fillcolor=coral,
+        color=coral4,
+        fontcolor=coral4];
+    realm[
+        fillcolor=orange2,
+        color=orangered,
+        fontcolor=orangered
+    ];
+
+    edge[
+        color=chartreuse4, 
+        fontcolor=chartreuse4
+    ];
+    host -> resultmodulation;
+
+    edge[
+        color=palegreen4, 
+        fontcolor=palegreen4
+    ];
+    host -> command [label="check_command \n event_handler\n  snapshot_command"];
+    contact -> command [label="host_notification_command\nservice_notification_command"];
+    notificationway -> command[label="service_notification_command\nhost_notification_period",color=palegreen4,fontcolor=palegreen4];
+    service -> command[label="check_command\nevent_handler\snapshot_command"];
+
+    edge[
+        color=red, 
+        fontcolor=red
+    ];
+    host -> contact;
+    hostescalation -> contact;
+    service -> contact;
+    serviceescalation -> contact;
+
+    host -> contactgroup;
+    hostescalation -> contactgroup;
+    service -> contactgroup;
+    serviceescalation -> contactgroup;
+
+    edge[
+        color=maroon4, 
+        fontcolor=maroon4
+    ];
+    host -> timeperiod [label="check_period \n notification_period\n maintenance_period\n snapshot_period"];
+    hostdependency -> timeperiod;
+    hostescalation -> timeperiod;
+    contact -> timeperiod [label="host_notificiation_period \nservice_notification_periof"];
+    resultmodulation -> timeperiod[label="modulation_period"];
+    notificationway -> timeperiod[label="service_notification_period\nhost_notification_period"];
+    service -> timeperiod[label="check_period\nnotification_period\nmaintenance_period\nsnapshot_period"];
+    servicedependency -> timeperiod;
+    serviceescalation -> timeperiod;
+
+    edge[
+        color=orangered, 
+        fontcolor=orangered
+    ];
+    host -> realm;
+    hostgroup -> realm;
+    realm -> realm[label="members\n"];
+
+    edge[
+        color=blue, 
+        fontcolor=blue
+    ];
+    service -> host;
+    servicedependency -> host;
+    service -> hostgroup;
+    servicedependency -> hostgroup[xlabel="dependent_hostgroup_name\nhostgroup_name"];
+    serviceescalation -> host;
+    serviceescalation -> hostgroup;
+
+}

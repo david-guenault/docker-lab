@@ -1,0 +1,5 @@
+Just an attempt to visualize the relations between shinken configuration objects. 
+
+You will need graphviz to generate the graph. 
+
+Use the following command to generate the graph : circo -Tpng -o objects.png ./objects
