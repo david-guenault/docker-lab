@@ -135,8 +135,20 @@ RUN     shinken --init && \
             pip install docopt checkmyws-python
 
 #########################################################
+# supervisor base 
+#########################################################
+
+RUN	pip install supervisor && \
+                  echo_supervisord_conf > /etc/supervisord.conf && \
+                  echo "[include]" >> /etc/supervisord.conf && \
+                  echo "files = supervisord.d/*.conf" >> /etc/supervisord.conf && \
+                  mkdir -p /etc/supervisord.d
+
+#########################################################
 # Cleanup and Hacks
 #########################################################
 
 ## remove shinken sources
 RUN      rm -Rf /home/shinken/shinken
+
+CMD	["/usr/local/bin/supervisord", "-n", "-c", "/etc/supervisord.conf"]
