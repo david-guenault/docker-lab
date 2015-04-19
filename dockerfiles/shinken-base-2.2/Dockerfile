@@ -17,7 +17,8 @@ RUN    apt-get update && apt-get -y upgrade && \
 # install shinken
 #########################################################
 
-RUN     useradd shinken --gid $SHINKENGID --uid $SHINKENUID && \
+RUN         groupadd -g $SHINKENGID shinken && \
+            useradd shinken --gid $SHINKENGID --uid $SHINKENUID && \
             mkdir -p /home/shinken && \
             cd /home/shinken && git clone https://github.com/naparuba/shinken.git && \
             cd /home/shinken/shinken && git checkout tags/$TAG && \
