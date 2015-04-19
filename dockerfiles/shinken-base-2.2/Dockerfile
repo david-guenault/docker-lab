@@ -87,6 +87,7 @@ RUN     shinken --init && \
             shinken install snapshot-mongodb && \
             shinken install retention-mongodb && \
             shinken install auth-cfg-password && \
+            shinken install retention-redis && \
             shinken install ws-arbiter
 
 # enable scheduler retention
