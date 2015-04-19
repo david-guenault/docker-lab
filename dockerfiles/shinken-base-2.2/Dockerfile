@@ -4,19 +4,20 @@
 FROM                debian:7
 MAINTAINER      Shinken
 ENV                   TAG 2.2
-
+ENV   SHINKENUID 1003
+ENV   SHINKENGID 1003
 #########################################################
 # Prerequisites
 #########################################################
 RUN    apt-get update && apt-get -y upgrade && \
-           apt-get -y install python-pycurl python-pip git vim-nox python-paramiko sysstat wget curl \ 
+           apt-get -y install python-pycurl python-pip git vim-nox python-paramiko sysstat wget curl net-tools\ 
             python-pymongo python-gridfs python-pysqlite2
 
 #########################################################
 # install shinken
 #########################################################
 
-RUN     useradd shinken && \
+RUN     useradd shinken --gid $SHINKENGID --uid $SHINKENUID && \
             mkdir -p /home/shinken && \
             cd /home/shinken && git clone https://github.com/naparuba/shinken.git && \
             cd /home/shinken/shinken && git checkout tags/$TAG && \
@@ -84,7 +85,8 @@ RUN     shinken --init && \
             shinken install sqlitelog && \
             shinken install snapshot-mongodb && \
             shinken install retention-mongodb && \
-            shinken install auth-cfg-password
+            shinken install auth-cfg-password && \
+            shinken install ws-arbiter
 
 # enable scheduler retention
 RUN      sed -i -E "s/^(\s+modules).*$/\1 pickle-retention-file/g" /etc/shinken/schedulers/scheduler-master.cfg
