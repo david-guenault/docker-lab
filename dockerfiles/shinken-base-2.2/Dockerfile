@@ -11,7 +11,7 @@ ENV   SHINKENGID 1003
 #########################################################
 RUN    apt-get update && apt-get -y upgrade && \
            apt-get -y install python-pycurl python-pip git vim-nox python-paramiko sysstat wget curl net-tools\ 
-            python-pymongo python-gridfs python-pysqlite2
+            python-pymongo python-gridfs python-pysqlite2 python-redis
 
 #########################################################
 # install shinken
