@@ -104,8 +104,6 @@ RUN     shinken --init && \
             shinken install linux-snmp && \
             shinken install ldap && \
             shinken install imap && \
-            shinken install arbiter2 && \
-            shinken install san-switch && \
             shinken install san-switch && \
             shinken install oracle && \
             shinken install exchange && \
