@@ -1,0 +1,23 @@
+rah1:
+    image: dguenault/shinken-base:2.2
+    hostname: rah1
+    dns: 
+        - 172.17.42.1
+        - 10.10.0.1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+        - shinken:/etc/shinken
+        - supervisor/rah1.conf:/etc/supervisord.d/shinken:ro
+        - certs:/home/shinken/.docker:ro
+
+thruk:
+    image: dguenault/thruk:latest
+    hostname: thruk
+    dns:
+        - 172.17.42.1
+        - 10.10.0.1
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+        - shinken:/etc/shinken
