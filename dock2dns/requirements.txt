@@ -1,0 +1,5 @@
+docker-py
+cffi 
+pyopenssl 
+ndg-httpsclient 
+pyasn1 

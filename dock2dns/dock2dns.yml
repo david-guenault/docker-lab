@@ -1,0 +1,38 @@
+dock2dns:
+    image: dguenault/dock2dns:latest
+    hostname: dock2dns
+    volumes:
+        - /etc/timezone:/etc/timezone:ro
+        - /etc/localtime:/etc/localtime:ro
+        - certs/ca.pem:/certs/ca.pem
+        - certs/cert.pem:/certs/cert.pem
+        - certs/key.pem:/certs/key.pem
+    dns: 
+        - 10.10.0.1
+    links:
+        - etcd:etcd    
+        - skydns:skydns
+    environment:
+        - DOMAIN=box4prod.lan
+        - ETCD=http://etcd:4001
+        - DOCKER=https://node3:2375
+
+etcd:
+    image:  coreos/etcd:latest
+    hostname: etcd
+    volumes:
+        - /etc/timezone:/etc/timezone:ro
+        - /etc/localtime:/etc/localtime:ro
+
+
+skydns:
+    image: skynetservices/skydns
+    hostname: skydns
+    volumes:
+        - /etc/timezone:/etc/timezone:ro
+        - /etc/localtime:/etc/localtime:ro
+    links:
+        - etcd:etcd
+    ports:
+        - "172.17.42.1:53:53/udp"
+    command: -addr 0.0.0.0:53 -domain box4prod.lan -machines http://etcd:4001 -nameservers 10.10.0.1:53
