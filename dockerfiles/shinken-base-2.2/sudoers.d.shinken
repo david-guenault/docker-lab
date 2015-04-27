@@ -1,0 +1,5 @@
+User_Alias      SHINKEN=shinken, www-data
+Defaults:SHINKEN !requiretty
+SHINKEN ALL= NOPASSWD: /usr/bin/nmap
+SHINKEN ALL= NOPASSWD: /etc/init.d/shinken*
+SHINKEN ALL= NOPASSWD: /usr/local/bin/supervisorctl *

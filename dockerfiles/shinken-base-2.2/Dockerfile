@@ -11,7 +11,7 @@ ENV   SHINKENGID 1003
 #########################################################
 RUN    apt-get update && apt-get -y upgrade && \
            apt-get -y install python-pycurl python-pip git vim-nox python-paramiko sysstat wget curl net-tools\ 
-            python-pymongo python-gridfs python-pysqlite2 python-redis
+            python-pymongo python-gridfs python-pysqlite2 python-redis sudo
 
 #########################################################
 # install shinken
@@ -140,11 +140,17 @@ RUN     shinken --init && \
 # supervisor base 
 #########################################################
 
-RUN	pip install supervisor && \
+RUN   pip install supervisor && \
                   echo_supervisord_conf > /etc/supervisord.conf && \
                   echo "[include]" >> /etc/supervisord.conf && \
                   echo "files = supervisord.d/*.conf" >> /etc/supervisord.conf && \
                   mkdir -p /etc/supervisord.d
+
+#########################################################
+# sudoers
+#########################################################
+COPY        sudoers.d.shinken /etc/sudoers.d/shinken
+RUN         chmod 440 /etc/sudoers.d/shinken
 
 #########################################################
 # Cleanup and Hacks
