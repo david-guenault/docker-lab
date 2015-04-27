@@ -1,0 +1,49 @@
+{
+    "name":"dockerstats",
+    "description":"Check docker containers stats.",
+    "path":"shinken/",
+    "macros":{
+        "_shinken_daemon": {
+            "type":"list",
+            "description": "list of daemon types to check (arbiter,poller,broker,scheduler,receiver,reactionner)"
+        },
+    }
+}
+
+    "macros":{
+        "_DOCKER_CONTAINERS" {
+            "type":"list",
+            "description":"coma separated list of containers names to be monitored"
+        },
+        "_DOCKER_PORT" {
+            "type":"int",
+            "description":"The docker host tcp port to connect to"
+        },
+        "_DOCKER_CERTS_PATH" {
+            "type":"str",
+            "description":"tls certificates path"
+        },
+        "_DOCKER_CA" {
+            "type":"str",
+            "description":"tls ca"
+        },
+        "_DOCKER_CERT" {
+            "type":"str",
+            "description":"tls client cert"
+        },
+        "_DOCKER_KEY" {
+            "type":"str",
+            "description":"tls client key"
+        },
+
+    _CPU_WARN 80
+    _CPU_CRIT 90
+    _CPU_WAIT 2
+
+    _MEMORY_WARN 80
+    _MEMORY_CRIT 90
+
+    _NET_WARN 80
+    _NET_CRIT 100
+    _NET_WAIT 2
+    _NET_UNIT M
