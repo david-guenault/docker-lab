@@ -99,7 +99,7 @@ RUN      sed -i -E "s/^(\s+modules).*$/\1 pickle-retention-file/g" /etc/shinken/
 RUN     shinken --init && \
             shinken install mongodb && \
             shinken install check_mywebsite && \
-            shinken install arbiter2 && \
+            # shinken install arbiter2 && \
             shinken install linux-ssh && \
             shinken install linux-snmp && \
             shinken install ldap && \
@@ -135,6 +135,17 @@ RUN     shinken --init && \
             shinken install switch && \
             shinken install mssql && \
             pip install docopt checkmyws-python
+
+# temp install dockerstats and arbiter 2 pack from git 
+RUN   apt-get -y install python-dev  libffi-dev && \
+          pip install pyopenssl ndg-httpsclient pyasn1 && \
+          cd /tmp && \
+          git clone https://github.com/david-guenault/shinken-packs.git && \
+          cd shinken-packs && \
+          pip install docker-py && \
+          pip install requests && \
+          shinken install --local pack-dockerstats && \
+          shinken install --local pack-arbiter2
 
 #########################################################
 # supervisor base 
