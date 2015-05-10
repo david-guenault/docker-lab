@@ -1,3 +1,4 @@
+REPOSITORY=dguenault
 NAME = dock2dns
 RUNNAME = dock2dns
 TAG = latest
@@ -6,22 +7,23 @@ DOCKER=/usr/bin/docker
 COMPOSE=/usr/local/bin/docker-compose
 YAML=$(NAME).yml
 
-include ../dockerfiles/common/Makefile
+build:
+	$(DOCKER) build -t $(REPOSITORY)/$(NAME):$(TAG) .
 
-doup:
+up:
 	$(COMPOSE) -f $(YAML)  up -d
 
-dostart:
+start:
 	$(COMPOSE) -f $(YAML) start
 
-dostop:
+stop:
 	$(COMPOSE) -f $(YAML) stop
 
-dokill:
+kill:
 	$(COMPOSE) -f $(YAML) kill
 
-dops:
+ps:
 	$(COMPOSE) -f $(YAML) ps
 
-dorm:
+rm:
 	$(COMPOSE) -f $(YAML) rm --force
