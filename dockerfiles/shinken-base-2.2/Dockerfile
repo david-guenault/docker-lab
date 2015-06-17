@@ -164,6 +164,26 @@ RUN   pip install supervisor && \
 COPY        sudoers.d.shinken /etc/sudoers.d/shinken
 RUN         chmod 440 /etc/sudoers.d/shinken
 
+
+#########################################################
+# check_mssql_health plugin and pack
+#########################################################
+RUN     cd /tmp && \
+            apt-get install -y freetds-dev freetds-bin libdbi-perl libdbd-sybase-perl && \
+            sed -E -i "s/;(\s+tds version = ).*$/\1 8.0/g" /etc/freetds/freetds.conf && \
+            wget http://labs.consol.de/download/shinken-nagios-plugins/check_mssql_health-1.5.20.6.tar.gz && \
+            tar zxvf check_mssql_health-1.5.20.6.tar.gz && \
+            cd check_mssql_health-1.5.20.6 && \
+            ./configure --with-nagios-user=shinken --with-nagios-group=shinken --with-mymodules-dir=/var/lib/shinken/libexec --with-mymodules-dyn-dir=/var/lib/shinken/libexec && \
+            make && \
+            cp plugins-scripts/check_mssql_health /var/lib/shinken/libexec/ && \
+            cd /tmp && \
+            git clone https://github.com/david-guenault/pack-mssql.git && \
+            shinken --init && \
+            shinken install --local pack-mssql            
+
+
+
 #########################################################
 # Cleanup and Hacks
 #########################################################
