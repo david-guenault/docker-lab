@@ -2,22 +2,137 @@ rah1:
     image: dguenault/shinken-base:2.2
     hostname: rah1
     dns: 
-        - 172.17.42.1
+        - 10.0.42.1
         - 10.10.0.1
+    dns_search:
+        - box4prod.lan
     volumes:
         - /etc/localtime:/etc/localtime:ro
         - /etc/timezone:/etc/timezone:ro
         - shinken:/etc/shinken
-        - supervisor/rah1.conf:/etc/supervisord.d/shinken:ro
-        - certs:/home/shinken/.docker:ro
+        - supervisor/rah1.conf:/etc/supervisord.d/shinken.conf:ro
+        - certs/docker:/home/shinken/.docker:ro
+        - certs/shinken:/etc/shinken/certs:ro
+    mem_limit: 1024M
+    cpu_shares: 4096
+
+rah2:
+    image: dguenault/shinken-base:2.2
+    hostname: rah2
+    dns: 
+        - 10.0.42.1
+        - 10.10.0.1
+    dns_search:
+        - box4prod.lan
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+        - shinken:/etc/shinken
+        - supervisor/rah2.conf:/etc/supervisord.d/shinken.conf:ro
+        - certs/docker:/home/shinken/.docker:ro
+        - certs/shinken:/etc/shinken/certs:ro
+    mem_limit: 1024M
+    cpu_shares: 4096
+
+rah3:
+    image: dguenault/shinken-base:2.2
+    hostname: rah3
+    dns: 
+        - 10.0.42.1
+        - 10.10.0.1
+    dns_search:
+        - box4prod.lan
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+        - shinken:/etc/shinken
+        - supervisor/rah3.conf:/etc/supervisord.d/shinken.conf:ro
+        - certs/docker:/home/shinken/.docker:ro
+        - certs/shinken:/etc/shinken/certs:ro
+    mem_limit: 1024M
+    cpu_shares: 4096
+
+rah4:
+    image: dguenault/shinken-base:2.2
+    hostname: rah4
+    dns: 
+        - 10.0.42.1
+        - 10.10.0.1
+    dns_search:
+        - box4prod.lan
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+        - shinken:/etc/shinken
+        - supervisor/rah4.conf:/etc/supervisord.d/shinken.conf:ro
+        - certs/docker:/home/shinken/.docker:ro
+        - certs/shinken:/etc/shinken/certs:ro
+    mem_limit: 1024M
+    cpu_shares: 4096
+
+# rah5:
+#     image: dguenault/shinken-base:2.2
+#     hostname: rah5
+#     dns: 
+#         - 10.0.42.1
+#         - 10.10.0.1
+#     dns_search:
+#         - box4prod.lan
+#     volumes:
+#         - /etc/localtime:/etc/localtime:ro
+#         - /etc/timezone:/etc/timezone:ro
+#         - shinken:/etc/shinken
+#         - supervisor/rah5.conf:/etc/supervisord.d/shinken.conf:ro
+#         - certs:/home/shinken/.docker:ro
+#     mem_limit: 1024M
+#     cpu_shares: 4096
 
 thruk:
     image: dguenault/thruk:latest
     hostname: thruk
     dns:
-        - 172.17.42.1
+        - 10.0.42.1
         - 10.10.0.1
+    dns_search:
+        - box4prod.lan
+    ports:
+        - "80:80"
     volumes:
         - /etc/localtime:/etc/localtime:ro
         - /etc/timezone:/etc/timezone:ro
-        - shinken:/etc/shinken
+        - shinken:/etc/shinken:rw
+        - thruk_local.conf:/etc/thruk/thruk_local.conf:rw
+    mem_limit: 1024M
+    cpu_shares: 2048
+
+redis:
+    image: redis:latest
+    hostname: redis
+    dns:
+        - 10.0.42.1
+        - 10.10.0.1
+    dns_search:
+        - box4prod.lan
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+        - redis:/data:rw
+    mem_limit: 16M
+    cpu_shares: 1024
+    command: redis-server --appendonly yes
+
+# mongo:
+#     image: mongo:latest
+#     hostname: mongo
+#     dns:
+#         - 10.0.42.1
+#         - 10.10.0.1
+#     dns_search:
+#         - box4prod.lan
+#     volumes:
+#         - /etc/localtime:/etc/localtime:ro
+#         - /etc/timezone:/etc/timezone:ro
+#         - redis:/data:rw
+#     mem_limit: 1024M
+#     cpu_shares: 1024
+#     command: redis-server --appendonly yes

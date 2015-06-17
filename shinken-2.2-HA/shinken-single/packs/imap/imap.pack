@@ -1,0 +1,14 @@
+{
+"name": "imap",
+
+"description": "Standard imap checks."
+
+"path":"mail/",
+
+"macros": {
+    "_IMAP_ADDRESS": {
+        "type":"string",
+        "description":"The address of the imap server. Defaults to HOSTADDRESS."
+    }
+}
+}

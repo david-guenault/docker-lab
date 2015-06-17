@@ -1,0 +1,9 @@
+{
+"name": "memcached",
+
+"description": "Standard memcached checks."
+
+"path":"databases/",
+
+"macros":{}
+}

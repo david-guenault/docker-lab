@@ -1,0 +1,50 @@
+shinken:
+    image: dguenault/shinken-base:2.2
+    hostname: shinken
+    dns: 
+        - 172.17.42.1
+        - 10.10.0.1
+    dns_search:
+        - box4prod.lan
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+        - shinken-single:/etc/shinken
+        - supervisor/shinken-single.conf:/etc/supervisord.d/shinken.conf:ro
+        - certs/docker:/home/shinken/.docker:ro
+    mem_limit: 1024M
+    cpu_shares: 4096
+
+thruk:
+    image: dguenault/thruk:latest
+    hostname: thruk
+    dns:
+        - 172.17.42.1
+        - 10.10.0.1
+    dns_search:
+        - box4prod.lan
+    ports:
+        - "80:80"
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+        - shinken-single:/etc/shinken:rw
+        - thruk_local-single.conf:/etc/thruk/thruk_local.conf:rw
+    mem_limit: 1024M
+    cpu_shares: 2048
+
+redis:
+    image: redis:latest
+    hostname: redis
+    dns:
+        - 172.17.42.1
+        - 10.10.0.1
+    dns_search:
+        - box4prod.lan
+    volumes:
+        - /etc/localtime:/etc/localtime:ro
+        - /etc/timezone:/etc/timezone:ro
+        - redis:/data:rw
+    mem_limit: 16M
+    cpu_shares: 1024
+    command: redis-server --appendonly yes

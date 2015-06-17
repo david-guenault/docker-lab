@@ -1,0 +1,71 @@
+{
+    "name":"dockerstats",
+    "description":"Check docker containers stats.",
+    "path":"shinken/",
+    "macros":{
+        "_DOCKER_CONTAINERS" {
+            "type":"list",
+            "description":"coma separated list of containers names to be monitored"
+        },
+        "_DOCKER_HOST" {
+            "type":"str",
+            "description":"From which docker host does this container is monitored"
+        },
+        "_DOCKER_PORT" {
+            "type":"int",
+            "description":"The docker host tcp port to connect to"
+        },
+        "_DOCKER_CERTS_PATH" {
+            "type":"str",
+            "description":"tls certificates path"
+        },
+        "_DOCKER_CA" {
+            "type":"str",
+            "description":"tls ca filename"
+        },
+        "_DOCKER_CERT" {
+            "type":"str",
+            "description":"tls client cert filename"
+        },
+        "_DOCKER_KEY" {
+            "type":"str",
+            "description":"tls client key filename"
+        },
+        "_CPU_WARN" {
+            "type":"int",
+            "description":"cpu warning threshold %"
+        },
+        "_CPU_CRIT" {
+            "type":"int",
+            "description":"cpu critical threshold %"
+        },
+        "_CPU_WAIT" {
+            "type":"int",
+            "description":"how many time (in seconds) to wait before two cpu data collections"
+        },
+        "_CPU_WARN" {
+            "type":"int",
+            "description":"memory warning threshold %"
+        },
+        "_CPU_CRIT" {
+            "type":"int",
+            "description":"memory critical threshold %"
+        },        
+        "_NET_WARN" {
+            "type":"int",
+            "description":"net bandwidth warning threshold depend on _NET_UNIT for unit"
+        },
+        "_NET_CRITICAL" {
+            "type":"int",
+            "description":"net bandwidth critical threshold depend on _NET_UNIT for unit"
+        },
+        "_NET_WAIT" {
+            "type":"int",
+            "description":"how many time (in seconds) to wait before two net data collections"
+        },
+        "_NET_UNIT" {
+            "type":"str",
+            "description":"net bandwidth unit (M for megabits/s, K for kilobits/s, O for octets/s"
+        },
+    }
+}
